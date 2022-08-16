@@ -275,7 +275,9 @@ class SATB(object):
 			seven_idx = chord1.pitches.index(seventh) # (seventh cannot be doubled, so is unique)
 			# Resolutions have to go down a m2 or M2.
 			if not (seventh == chord2[seven_idx] or Interval(noteStart=chord2[seven_idx], noteEnd=chord1[seven_idx]).name in {'m2','M2'}):
-				cost += 50
+				if seven_idx != 0 or (seventh.pitchClass + 12 - chord2[seven_idx].pitchClass)%12 > 2:
+					# negative logic above: we forgive the bass if it physically can't suspend {0}/resolve {1,2}
+					cost += 50
 			# alternative implementation: ================ (that allows enharmonic respellings, but resolutions still have to go down m2 or M2)
 			# if not (chord1[seven_idx].pitch.midi == chord2[seven_idx].pitch.midi or (Interval(noteStart=chord2[seven_idx], noteEnd=chord1[seven_idx]).generic.value == 2 and 0 < chord1[seven_idx].pitch.midi - chord2[seven_idx].pitch.midi <= 2)):
 			#    cost += 50
@@ -308,6 +310,10 @@ class SATB(object):
 				+ (0 if diffs[2][0] <= 2 else 2 if diffs[2][0] == 3 else 10 if diffs[2][0] <= 5 else 20 if diffs[2][0] <= 8 else 100) + 50 * diffs[2][1] # Alto
 				+ (0 if diffs[3][0] <= 2 else 5 if diffs[3][0] == 3 else 10 if diffs[3][0] <= 5 else 30 if diffs[3][0] <= 8 else 150) + 100 * diffs[3][1]) # Soprano
 		
+		if diffs[0][0] == 8 and Interval(noteStart=chord1[0], noteEnd=chord2[0]).direction.value == 1:
+			# prefer bass leaping up octave over bass leaping down.
+			cost += 5
+
 		# Parallelisms
 		# Q: Should we use semitone-distance or intervallic comparison?
 		# Anyway, here's the semitone-distance implementation (warning: the items in chord object are notes, not pitches. They require an extra conversion.)

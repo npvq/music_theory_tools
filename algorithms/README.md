@@ -2,6 +2,8 @@
 
 [toc]
 
+The algorithms are contained in an SATB class object, who takes in keyword argument configuration parameters, which are referenced throughout this documentation.
+
 ## DP Explanation.
 
 The DP (Dynamic Programming) Algorithm works as follows:
@@ -52,13 +54,15 @@ Furthermore, to encourage use of some chords over others, such as preferring com
 
 ### Dynamic Search
 
-Now, we can begin searching. Let's first store the roman numerals of the phrase in a list called `romanNumerals`, and let's store all the generated voicings in a list of lists called `voicings`. The length of these two lists are both `phraseLength`. The voicings of chord `x` of the phrase are located in the list stored as `voicings[x]`. Note that there is a different number of possible voicings for each chord, so the lengths of lists `voicings[x]` differ.[^1]
+Now, we can begin searching. Let's first store the roman numerals of the phrase in a list called `romanNumerals`, and let's store all the generated voicings in a list of lists called `voicings`. The length of these two lists are both `phraseLength`. The voicings of chord `x` of the phrase are located in the list stored as `voicings[x]`. Note that there is a different number of possible voicings for each chord, so the lengths of lists `voicings[x]` differ.[^f1]
 
 Next, create an identical table called `DP` where we will store the data of our dynamic search. We first prime the first row of `DP`, corresponding to the first chord, with the chord costs of each chord. (The pseudocode is 1-indexed for convenience.)
 
->**repeat** with i from 1 to length_of(voicings[1])
->	set DP[1][i] = chordCost(voicings[1][i], romanNumerals[1])
->end **repeat**
+```R
+repeat with i from 1 to length_of(voicings[1])
+	store DP[1][i] = chordCost(voicings[1][i], romanNumerals[1])
+end repeat
+```
 
 Afterwards, for each voicing in the subsequent chords, we want to store the minimal cost, and which voicing of the chord from the previous row gave this cost. To achieve this, we can use an iterative approach.
 
@@ -69,17 +73,95 @@ Afterwards, for each voicing in the subsequent chords, we want to store the mini
 
 Let's see it in action. To start, we set `bestCurrentCost` to infinity and update it when a better cost is found.
 
->**repeat** with n from 2 to phraseLength #(rest of the chords)
->	**repeat** with x from 1 to length_of(voicings[n]) #(with all voicings of chord n)
->		set bestCurrentCost
->	end **repeat**
->end **repeat**
+```python
+repeat with n from 2 to phraseLength #(rest of the chords)
+	repeat with x from 1 to length_of(voicings[n]) #(with all voicings of chord n)
+		set bestCurrentCost = Infinity
+		set bestCandidate = None
+		repeat with y from 1 to length_of(voicings[n-1]) #(with all voicings of chord n-1)
+			previousCost = DP[n-1][y].cost
+			currentCost = previousCost + progressionCost(voicings[n-1][y], romanNumerals[n-1],
+														 voicings[n][x], romanNumerals[n])
+						  + chordCost(voicings[n][x], romanNumerals[n])
 
+			if currentCost < bestCurrentCost then
+				update bestCurrentCost = currentCost
+				update bestCandidate = y # voicing that led to bestCurrentCost
+			end if
 
+		end repeat
+		store DP[n][x] = (bestCurrentCost, bestCandidate)
+	end repeat
+end repeat
+```
 
-### Optimization by Pruning
+Of course, since the `chordCost` is invariable to `y`, we can add this after the loop. Many other similar implementation details have been left out in order to highlight the principle rationale of this algorithm.
+
+Once we finish generating (memoizing) the `DP` table, we can *retrace* the solution.
+
+- First, look at the last row (final chord) of `DP`, which is `DP[phraseLength]`. Iterate through to find the final chord whose solution has the lowest cost, let's call this `totalCost`.
+- Let's say we find that the best solution (lowest cost) ends at index `z`, hence `totalCost = DP[phraseLength][z].cost`. 
+	- Then, the voicing in chord `phraseLength-1` that led to this optimal solution is stored as `DP[phraseLength][z].candidate`.
+	- We can repeat this procedure over and over to *retrace* the optimal solution, storing the candidates in a list as we go.
+- Once we're done, we can reverse this list to get our solution.
+
+Here is the pseudocode:
+
+```python
+set totalCost = Infinity
+set z = None
+repeat with i from 1 to length_of(DP[phraseLength])
+	if DP[phraseLength][i].cost < totalCost then
+		update totalCost = DP[phraseLength][i].cost
+		update z = DP[phraseLength][i].candidate
+	end if
+end repeat
+
+list solutionList
+append voicing[phraseLength][z] to solutionList
+
+repeat with n from phraseLength-1 down to 1
+	update z = DP[n][z].candidate # best candidate voicing of previous chord
+	append voicing[n][z] to solutionList
+end repeat
+
+reverse order of solutionList
+
+return solutionList
+```
+
+### Analysis and Optimization by Pruning
+
+This algorithm takes advantage of the modular nature of the fourpart voice-leading problem. Thanks to the four-voice limit (there are only four voices), the `chordCost` and `voiceLeadingCost` functions all run in constant time. The most complex part of the algorithm is when 
+
+Hence, this algorithm runs in 𝒪(NL²) time, where N is `phraseLength` and L is the maximum number of voicings per chord, because its most complex part of the algorithm is checking every possible progression from the voicings of chord `n-1` to the voicings of chord `n`, taking at most c⋅L²+d operations (where c and d are constants). This is done at `N-1` times, giving us the analyzed running time of 𝒪(NL²).
+
+This gives us yet another insight. Even though `chordCost` and `voiceLeadingCost` are constant-time operations, they are still rather slow because they utilize the `music21` library, and the sample input presented above could take up minutes to compute on a modern computer (as of 2022).
+
+One way we can improve this algorithm is by, conterintuitively, taking away the guarantee of optimality. This algorithm guarantees that it will give us *one of* the best solutions in terms of cost, wherein most of the chords are voice led pretty well. However, by the third chord, some of the optimal subroutes would have exeeded ten times that of the final optimal `totalCost`! There is no need to keep computing the `voiceLeadingCosts` for those subroutes, as they won't be anywhere near optimal unless something goes terribly wrong. In this case, we are making a bet that it won't.
+
+The bet is that by eliminating all subroutes that underperform the optimal subroute by a certain factor after each iteration, we will still end up with an optimal solution or something very close to that. This constant factor is called the `Confidence`. However, this leads to a problem, especially when the optimal subroute cost is either 0 or a very small value, as this can lead the elimination of too many routes, and resulting in a suboptimal solution. This is where the second constant, `Buffer` comes in. So now, after each iteration, we go through that row in `DP` and find the `minimalCost`. Then, we go through that row of `DP` once again and throw away every term whose `cost > Confidence * (minimalCost + Buffer)`. This can drastically reduce the computation cost, and in my experience testing common chord progressions, never led to a suboptimal solution (with higher cost).[^f2] With this, we have effectively pruned the search space without losing much performance.
+
+Lastly, when two simple root position triads (like `I IV`) are presented as the first two chords, they both provide around eighty potential voicings, where a decent portion of the possible pairs result in good voice leading, we have no reason to stall the program and search through them for an "extra good" progression. This is when we can use `chordCost` to eliminate less preferable voicings of the first chord with the help of a constant that we will call `FirstBuffer`. Note that, at this point, `minimalCost` is likely but not necessarily 0. We want to eliminate more choices if both A and B are large (if the first two chords both have a lot of potential voicings). So the following formula was devised to eliminate voicings of the first chord:
+
+`cost > Confidence * (minimalCost + FirstBuffer/(A*B))`
+
+Through experimentation, it was found that a good value for FirstBuffer is 10,000.
+
+#### Important Settings Values
+
+| Config            | Type  | Usage                                                                                                                   | Default |
+|-------------------|-------|-------------------------------------------------------------------------------------------------------------------------|---------|
+| `dp_pruning`      | Bool  | Prune the search space during DP. Drastic speed improvements, but might   result in suboptimal solution.                | `True`  |
+| `dp_prune_first`  | Bool  | If Pruning is on, determines whether to prune voicings of the first   chord.                                            | `True`  |
+| `dp_confidence`   | Float | If Pruning is on, prunes all cost values greater than   `Confidence*(CurrentMin + Buffer)` after each iteration.        | `1.2`   |
+| `dp_buffer`       | Int   | Buffer to make sure pruning is not overdone when CurrentBest is zero or   very small.                                   | `5`     |
+| `dp_first_buffer` | Int   | If Prune_First is on, prunes all starting chord voicings greater than   `Confidence*(CurrentMin + First_Buffer/(A*B))`. | `10000` |
 
 ### Documentation of `chordCost`
+
+Here are the rules and their respective costs for indivudual chords. The last chord is given special consideration for cadential purposes. Setting any cost value to zero effectively disables it.
+
 
 ### Documentation of `voiceLeadingCost`
 
@@ -117,4 +199,5 @@ Incomplete seventh chords are necessary:
 The benchmarks are done with respect to [this](https://autoharmony.herokuapp.com/view/3).
 
 <!-- Footnotes -->
-[^1]: They are not necessarily different, but they need not be the same either.
+[^f1]: They are not necessarily different, but they need not be the same either.
+[^f2]: We also have to understand that "cost" is something we arbitrarily defined based off Common Practice Era voice leading rules and other conventions taught in music theory classes today. Hence, we cannot really say that a cost-optimal chord progression is necessarily better than one that is sligtly sub-optimal. And, at the end of the day, we just want a nicely voice-led chord progression without obvious objectionable parallel fifths, so it makes sense to prune the search space.
