@@ -1,0 +1,138 @@
+DBG: ##### CONFIDENCE VALUE = 1.2
+DBG: PHRASE 1 ====================
+DBG: DP: Setting up first chord...
+DBG: DP: running 2(th) chord (of 7 total)... ((81 of 81)x51=4131 pairs to run)
+DBG: DP:         took 10.948816061019897 seconds total (0.002650403306952287) seconds per pair)
+DBG: DP: running 3(th) chord (of 7 total)... ((7 of 51)x48=336 pairs to run)
+DBG: DP:         took 0.9387638568878174 seconds total (0.0027939400502613614) seconds per pair)
+DBG: DP: running 4(th) chord (of 7 total)... ((13 of 48)x58=754 pairs to run)
+DBG: DP:         took 1.9863460063934326 seconds total (0.002634411149062908) seconds per pair)
+DBG: DP: running 5(th) chord (of 7 total)... ((10 of 58)x15=150 pairs to run)
+DBG: DP:         took 0.403033971786499 seconds total (0.002686893145243327) seconds per pair)
+DBG: DP: running 6(th) chord (of 7 total)... ((3 of 15)x41=123 pairs to run)
+DBG: DP:         took 0.31989407539367676 seconds total (0.002600764840598998) seconds per pair)
+DBG: DP: running 7(th) chord (of 7 total)... ((5 of 41)x81=405 pairs to run)
+DBG: DP:         took 1.076465129852295 seconds total (0.0026579385922278886) seconds per pair)
+DBG: DP: Done! Retracing solution...
+DBG: Total Cost: 14
+DBG: PHRASE TOTAL TIME: 15.807149887084961 seconds
+DBG: PHRASE 2 ====================
+DBG: DP: Setting up first chord...
+DBG: DP: running 2(th) chord (of 7 total)... ((48 of 48)x16=768 pairs to run)
+DBG: DP:         took 2.0025250911712646 seconds total (0.0026074545457959175) seconds per pair)
+DBG: DP: running 3(th) chord (of 7 total)... ((10 of 16)x81=810 pairs to run)
+DBG: DP:         took 2.1369197368621826 seconds total (0.00263817251464467) seconds per pair)
+DBG: DP: running 4(th) chord (of 7 total)... ((7 of 81)x40=280 pairs to run)
+DBG: DP:         took 0.7455518245697021 seconds total (0.0026626850877489363) seconds per pair)
+DBG: DP: running 5(th) chord (of 7 total)... ((3 of 40)x41=123 pairs to run)
+DBG: DP:         took 0.32452392578125 seconds total (0.002638405900660569) seconds per pair)
+DBG: DP: running 6(th) chord (of 7 total)... ((1 of 41)x48=48 pairs to run)
+DBG: DP:         took 0.12933802604675293 seconds total (0.0026945422093073526) seconds per pair)
+DBG: DP: running 7(th) chord (of 7 total)... ((8 of 48)x41=328 pairs to run)
+DBG: DP:         took 0.8562901020050049 seconds total (0.0026106405548933075) seconds per pair)
+DBG: DP: Done! Retracing solution...
+DBG: Total Cost: 32
+DBG: PHRASE TOTAL TIME: 6.32421088218689 seconds
+DBG: PHRASE 3 ====================
+DBG: DP: Setting up first chord...
+DBG: DP: running 2(th) chord (of 7 total)... ((81 of 81)x40=3240 pairs to run)
+DBG: DP:         took 8.45836091041565 seconds total (0.0026106052192640893) seconds per pair)
+DBG: DP: running 3(th) chord (of 7 total)... ((15 of 40)x48=720 pairs to run)
+DBG: DP:         took 1.8928141593933105 seconds total (0.0026289085547129315) seconds per pair)
+DBG: DP: running 4(th) chord (of 7 total)... ((24 of 48)x58=1392 pairs to run)
+DBG: DP:         took 3.6154160499572754 seconds total (0.0025972816450842494) seconds per pair)
+DBG: DP: running 5(th) chord (of 7 total)... ((10 of 58)x15=150 pairs to run)
+DBG: DP:         took 0.39128804206848145 seconds total (0.0026085869471232097) seconds per pair)
+DBG: DP: running 6(th) chord (of 7 total)... ((5 of 15)x30=150 pairs to run)
+DBG: DP:         took 0.39025020599365234 seconds total (0.0026016680399576823) seconds per pair)
+DBG: DP: running 7(th) chord (of 7 total)... ((15 of 30)x51=765 pairs to run)
+DBG: DP:         took 2.032017946243286 seconds total (0.002656232609468348) seconds per pair)
+DBG: DP: Done! Retracing solution...
+DBG: Total Cost: 28
+DBG: PHRASE TOTAL TIME: 16.91184425354004 seconds
+DBG: PHRASE 4 ====================
+DBG: DP: Setting up first chord...
+DBG: DP: running 2(th) chord (of 7 total)... ((48 of 48)x16=768 pairs to run)
+DBG: DP:         took 2.0501549243927 seconds total (0.002669472557802995) seconds per pair)
+DBG: DP: running 3(th) chord (of 7 total)... ((13 of 16)x81=1053 pairs to run)
+DBG: DP:         took 2.810797691345215 seconds total (0.002669323543537716) seconds per pair)
+DBG: DP: running 4(th) chord (of 7 total)... ((30 of 81)x48=1440 pairs to run)
+DBG: DP:         took 3.748772144317627 seconds total (0.002603313989109463) seconds per pair)
+DBG: DP: running 5(th) chord (of 7 total)... ((36 of 48)x13=468 pairs to run)
+DBG: DP:         took 1.2601191997528076 seconds total (0.002692562392634204) seconds per pair)
+DBG: DP: running 6(th) chord (of 7 total)... ((8 of 13)x41=328 pairs to run)
+DBG: DP:         took 0.9037370681762695 seconds total (0.0027552959395617973) seconds per pair)
+DBG: DP: running 7(th) chord (of 7 total)... ((8 of 41)x81=648 pairs to run)
+DBG: DP:         took 1.7238988876342773 seconds total (0.00266033778955907) seconds per pair)
+DBG: DP: Done! Retracing solution...
+DBG: Total Cost: 49
+DBG: PHRASE TOTAL TIME: 12.625359773635864 seconds
+DBG: PHRASE 5 ====================
+DBG: DP: Setting up first chord...
+DBG: DP: running 2(th) chord (of 7 total)... ((67 of 67)x15=1005 pairs to run)
+DBG: DP:         took 2.59266996383667 seconds total (0.002579771108295194) seconds per pair)
+DBG: DP: running 3(th) chord (of 7 total)... ((11 of 15)x67=737 pairs to run)
+DBG: DP:         took 1.9152581691741943 seconds total (0.0025987220748632214) seconds per pair)
+DBG: DP: running 4(th) chord (of 7 total)... ((20 of 67)x74=1480 pairs to run)
+DBG: DP:         took 3.9035260677337646 seconds total (0.0026375176133336246) seconds per pair)
+DBG: DP: running 5(th) chord (of 7 total)... ((8 of 74)x43=344 pairs to run)
+DBG: DP:         took 0.9048399925231934 seconds total (0.002630348815474399) seconds per pair)
+DBG: DP: running 6(th) chord (of 7 total)... ((15 of 43)x31=465 pairs to run)
+DBG: DP:         took 1.2214748859405518 seconds total (0.002626827711700111) seconds per pair)
+DBG: DP: running 7(th) chord (of 7 total)... ((12 of 31)x67=804 pairs to run)
+DBG: DP:         took 2.119300127029419 seconds total (0.0026359454316286306) seconds per pair)
+DBG: DP: Done! Retracing solution...
+DBG: Total Cost: 27
+DBG: PHRASE TOTAL TIME: 12.809340238571167 seconds
+DBG: PHRASE 6 ====================
+DBG: DP: Setting up first chord...
+DBG: DP: running 2(th) chord (of 7 total)... ((36 of 36)x13=468 pairs to run)
+DBG: DP:         took 1.226680040359497 seconds total (0.0026211111973493528) seconds per pair)
+DBG: DP: running 3(th) chord (of 7 total)... ((10 of 13)x67=670 pairs to run)
+DBG: DP:         took 1.7578439712524414 seconds total (0.002623647718287226) seconds per pair)
+DBG: DP: running 4(th) chord (of 7 total)... ((16 of 67)x48=768 pairs to run)
+DBG: DP:         took 2.0452117919921875 seconds total (0.0026630361874898276) seconds per pair)
+DBG: DP: running 5(th) chord (of 7 total)... ((38 of 48)x13=494 pairs to run)
+DBG: DP:         took 1.2893147468566895 seconds total (0.002609948880276699) seconds per pair)
+DBG: DP: running 6(th) chord (of 7 total)... ((12 of 13)x26=312 pairs to run)
+DBG: DP:         took 0.823498010635376 seconds total (0.00263941670075441) seconds per pair)
+DBG: DP: running 7(th) chord (of 7 total)... ((26 of 26)x51=1326 pairs to run)
+DBG: DP:         took 3.4976658821105957 seconds total (0.002637757075498187) seconds per pair)
+DBG: DP: Done! Retracing solution...
+DBG: Total Cost: 27
+DBG: PHRASE TOTAL TIME: 10.746115684509277 seconds
+DBG: PHRASE 7 ====================
+DBG: DP: Setting up first chord...
+DBG: DP: running 2(th) chord (of 7 total)... ((81 of 81)x81=6561 pairs to run)
+DBG: DP:         took 17.211899042129517 seconds total (0.0026233651946547046) seconds per pair)
+DBG: DP: running 3(th) chord (of 7 total)... ((17 of 81)x39=663 pairs to run)
+DBG: DP:         took 1.7624990940093994 seconds total (0.002658369674222322) seconds per pair)
+DBG: DP: running 4(th) chord (of 7 total)... ((2 of 39)x32=64 pairs to run)
+DBG: DP:         took 0.1715681552886963 seconds total (0.0026807524263858795) seconds per pair)
+DBG: DP: running 5(th) chord (of 7 total)... ((13 of 32)x51=663 pairs to run)
+DBG: DP:         took 1.7224199771881104 seconds total (0.0025979185176291256) seconds per pair)
+DBG: DP: running 6(th) chord (of 7 total)... ((16 of 51)x13=208 pairs to run)
+DBG: DP:         took 0.5482640266418457 seconds total (0.002635884743470412) seconds per pair)
+DBG: DP: running 7(th) chord (of 7 total)... ((8 of 13)x67=536 pairs to run)
+DBG: DP:         took 1.409235954284668 seconds total (0.002629171556501246) seconds per pair)
+DBG: DP: Done! Retracing solution...
+DBG: Total Cost: 182
+DBG: PHRASE TOTAL TIME: 22.97743320465088 seconds
+DBG: PHRASE 8 ====================
+DBG: DP: Setting up first chord...
+DBG: DP: running 2(th) chord (of 7 total)... ((40 of 40)x81=3240 pairs to run)
+DBG: DP:         took 8.472709894180298 seconds total (0.002615033917956882) seconds per pair)
+DBG: DP: running 3(th) chord (of 7 total)... ((13 of 81)x11=143 pairs to run)
+DBG: DP:         took 0.37067413330078125 seconds total (0.0025921268062991695) seconds per pair)
+DBG: DP: running 4(th) chord (of 7 total)... ((8 of 11)x81=648 pairs to run)
+DBG: DP:         took 1.696516990661621 seconds total (0.0026180817757123784) seconds per pair)
+DBG: DP: running 5(th) chord (of 7 total)... ((55 of 81)x13=715 pairs to run)
+DBG: DP:         took 1.9184699058532715 seconds total (0.002683174693501079) seconds per pair)
+DBG: DP: running 6(th) chord (of 7 total)... ((13 of 13)x30=390 pairs to run)
+DBG: DP:         took 1.0371131896972656 seconds total (0.0026592645889673477) seconds per pair)
+DBG: DP: running 7(th) chord (of 7 total)... ((22 of 30)x81=1782 pairs to run)
+DBG: DP:         took 4.740943908691406 seconds total (0.0026604623505563445) seconds per pair)
+DBG: DP: Done! Retracing solution...
+DBG: Total Cost: 204
+DBG: PHRASE TOTAL TIME: 18.364878177642822 seconds
+DBG: ++++++++++ TOTAL TIME ++++++++++ 116.56646299362183 seconds ++++++++++
