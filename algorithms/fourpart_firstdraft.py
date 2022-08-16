@@ -566,7 +566,7 @@ def generateScore(chords, lengths=None, ts="4/4"): # PEP8
         lengths = [1 for _ in chords]
     else: 
     	while len(lengths) < len(chords):
-    		lengths.extend(lengths)
+            lengths.extend(lengths)
     voices = [Voice21([Piano()]) for _ in range(4)]
     for chord, length in zip(chords, lengths):
         bass, tenor, alto, soprano = [
