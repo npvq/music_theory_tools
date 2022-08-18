@@ -17,7 +17,7 @@ from music21.stream import Part, Score, Voice
 
 from settings import default_config
 
-# Implementation restored in this version for consistency
+# for more implementation details, see previous versions! (especially ver2)
 
 DEBUG = True
 import time
@@ -31,6 +31,15 @@ scale_value = lambda n : {'C':0,'D':1,'E':2,'F':3,'G':4,'A':5,'B':6}[n[0]]
 # helper to fetch resolution target notes (ignore return value) [also note strict inequality >/<]
 aboveOctave = lambda t_p, p: p.octave if scale_value(t_p.name) > scale_value(p.name) else p.octave+1 # (target pitch and reference pitch)
 belowOctave = lambda t_p, p: p.octave if scale_value(t_p.name) < scale_value(p.name) else p.octave-1
+
+# class Solfege(IntEnum):
+# 	DO = 0
+# 	RE = 1
+# 	MI = 2
+# 	FA = 3
+# 	SOL = 4
+# 	LA = 5
+# 	TI = 6
 
 # temp: there should be a better solution, but this one will do for now.
 _dominant = {'major': ['5', '7'], 'minor': ['5', '#7']}
@@ -71,10 +80,10 @@ class SATB(object):
 		# note: same note twice means go an octave down, hence the strict inequality (<)
 		nextOctaveDown = lambda new_name, last_pitch: last_pitch.octave if scale_value(new_name) < scale_value(last_pitch.name) else last_pitch.octave-1
 
-		# Strategy: try a random Soprano octave to start,
+		# Strategy: try a random Soprano note and use spacing rules to go down,
 		# for Alto and Tenor there is basically only one correct choice; we are locked in.
 		bass = chordMembers.pop(0)
-		# sn,an,tn,bass: note names of chord members. s,a,t,b are pitches
+		# sn,an,tn,bass: note names of chord members. s,a,t,b: actual pitches
 		for sn, an, tn in permutations(chordMembers, 3):
 			for s in self._generate_pitches(Pitch(sn), lb=self.ranges[3][2], ub=self.ranges[3][3]):
 				a = Pitch(an)
@@ -89,8 +98,6 @@ class SATB(object):
 	def voiceChord(self, rm): # roman numeral
 		"""Generates possible 4-part voicings for a triad or seventh chord.
 		   Secondary dominants should be given in the key they tonicize, rather than the home key of the progression"""
-
-		# Decides what set (multiset) of notes to use, hands off to _generate_voicings to determine potential voicings.
 
 		# This step mostly determines doubling and avoids doubling leading/tendency tones.
 		# Seventh chords can have incompelete voicings, but the fa->mi (aka the seventh) of seventh chords cannot be doubled (PSR Rule)
@@ -139,8 +146,6 @@ class SATB(object):
 					yield from self._generate_voicings(chordMembers + [rm.fifth.name])
 
 	def _get_chordCost(self):
-		"""Factory function to provide a fast and static chordCost function stored as a class method.
-		   Runs once during object initialization. Uses closure to store config as local vairables."""
 
 		_midi_ranges = [[p.midi for p in v] for v in self.ranges]
 		_ch_voice_outside_common_range = self.config['ch_voice_outside_common_range']
@@ -158,12 +163,10 @@ class SATB(object):
 		def _chordCost(chord, rm, last_chord=False):
 			"""This method computes the cost of chord voicing infractions and is run once on every chord.
 			   Its purpose is to encourage some voicings over others."""
-			# Note to reader: this function should only discriminate between the different voicings of a particular chord (the chord has already been decided and locked-in).
+			# Note to reader: this function should only discriminate between the different voicings of a particular chord as the chord itself has already been decided.
 			cost = 0
 			_set_size = len(set(chord.pitchClasses))
-
 			# encourage full chord voicings, prefer root doubling.
-
 			if rm.containsSeventh(): # SEVENTH CHORD
 				if _set_size < 4:
 					if chord.pitchClasses.count(rm.root().pitchClass) == 2:
@@ -174,21 +177,19 @@ class SATB(object):
 				if rm.inversion() != 2 and chord.pitchClasses.count(rm.root().pitchClass) < 2:
 						cost += _ch_triad_did_not_double_root
 				if _set_size < 3:
-					# incomplete chord should only be last chord (it is guaranteed by voiceChord that they are also RP chords)
+					# incomplete chord should be last chord (should also be RP, but not going to check.)
 					if chord.pitchClasses.count(rm.root().pitchClass) == 3:
 						cost += _ch_triad_inc_tripled_root_last if last_chord else _ch_triad_inc_tripled_root
 					else:
 						cost += _ch_triad_inc_doubled_third_last if last_chord else _ch_triad_inc_doubled_third
-			
-			# check for voice-range vilations or deductions.
+			# check voice ranges:
 			for i in range(4):
 				if _midi_ranges[i][0] <= chord[i].pitch.midi <= _midi_ranges[i][1]:
 					continue
 				elif _midi_ranges[i][2] <= chord[i].pitch.midi <= _midi_ranges[i][3]:
 					cost += _ch_voice_outside_common_range
 				else:
-					cost += _ch_voice_outside_range # not permissible (high penalty by default)
-
+					cost += _ch_voice_outside_range # not permissible
 			# slightly prefer authentic cadences (soprano doubles root)
 			if last_chord and rm.figure in {'i', 'I'} and chord[3].pitch.name != rm.root().name:
 				if (chord[3].pitch.name == rm.third.name):
@@ -200,11 +201,8 @@ class SATB(object):
 		return _chordCost
 
 	def _get_voiceLeadingCostFunction(self, rm1, rm2):
-		"""Factory function for voiceLeadingCost pre-loaded with roman numerals.
-		   Executed once for every chord pair in DP. Uses closure to load config as local variables."""
-		
-		# Stategy: precomputes chord data, returns one function with no recursive calls.
-		# Alternatively we could return different functions based on chord information, but that adds extraneous overhead.
+		"""This method provides a voiceLeadingCost function pre-loaded with roman numerals."""
+		# Strategy: separate out into rm1-dominant, rm1-nondominan, and either-way groups??
 
 		# OVERHEAD
 		_rm1_key = rm1.secondaryRomanNumeralKey if rm1.secondaryRomanNumeral else rm1.key
@@ -273,33 +271,33 @@ class SATB(object):
 			"""This method computes the costs of voice leading infractions/violations
 			   and is run on every adjacent chord pair in a phrase."""
 			cost = 0
-			# helper sets
+			# helper
 			pchord1 = chord1.pitches
 			pchord2 = chord2.pitches
 			# FUNCTION SPECIFIC
-# ti->ti or ti->do (ti->sol) [DOMINANT CASE]
 			if _rm1_is_dominant:
+				# ti->ti or ti->do (ti->sol)
 				if _LT in chord1.pitchNames:
 					lt_idx = chord1.pitchNames.index(_LT) # leadingtone_index : there can only be one.
 					if pchord2[lt_idx] not in (pchord1[lt_idx], Pitch(_DO, octave=_above(_DO, pchord1[lt_idx]))) and (lt_idx != 0 or chord2[0].name not in {_LT, _DO.name}): #ForgiveBass if it is *not* at all possible to resolve/sustain
 						# FRUSTRATED LEADING TONE (inner voice)
 						if lt_idx in {1, 2} and Pitch(_SOL, octave=_below(_SOL, chord1[lt_idx])): cost += _vl_frustrated_lt_dominant
 						else: cost += _vl_lt_violation_dominant * (_vl_lt_tt_violation_cadential_multiplier if _resolves else 1)
-# fa->mi (dominant tendency tone)
+				# fa->mi
 				if not _rm2_is_dominant: #(or _resolves) Note: even in resolution, Dom/V -> i64 can have the "fa" held/sustained before resolving to "mi."
 					if _FT in chord1.pitchNames: # possibly more than one
 						for ft_idx, p in enumerate(chord1.pitchNames):
 							if p == _FT and pchord2[ft_idx] not in (chord1[ft_idx].pitch, Pitch(_MI, octave=_below(_MI, pchord1[ft_idx]))) and (ft_idx != 0 or chord2[ft_idx].name == _MI.name): #ForgiveBass
 									cost += _vl_dominant_tt_not_resolved * (_vl_lt_tt_violation_cadential_multiplier if _resolves else 1)
 			else: # rm1 not dominant
-# ti->ti or ti->do (ti->sol) [NONDOMINANT CASE]
-				if _LT in chord1.pitchNames: 
+				# ti->ti or ti->do (ti->sol)
+				if _LT in chord1.pitchNames:
 					lt_idx = chord1.pitchNames.index(_LT) # leadingtone_index : there can only be one.
 					if pchord2[lt_idx] not in (pchord1[lt_idx], Pitch(_DO, octave=_above(_DO, pchord1[lt_idx]))) and (lt_idx != 0 or chord2[0].name not in {_LT, _DO.name}): #ForgiveBass if it is *not* at all possible to resolve/sustain
-	# FRUSTRATED LEADING TONE (inner voice)
+						# FRUSTRATED LEADING TONE (inner voice)
 						if lt_idx in {1, 2} and Pitch(_SOL, octave=_below(_SOL, chord1[lt_idx])): cost += _vl_frustrated_lt
 						else: cost += _vl_lt_violation
-# non-dominant 7 resolution
+				# non-dominant 7 resolution
 				if rm1.containsSeventh():
 					seventh = chord1.seventh
 					seven_idx = pchord1.index(seventh) # (seventh cannot be doubled, so is unique)
@@ -307,50 +305,51 @@ class SATB(object):
 					if not (seventh == pchord2[seven_idx] or Interval(noteStart=chord2[seven_idx], noteEnd=chord1[seven_idx]).name in {'m2','M2'}) and (seven_idx != 0 or (seventh.pitchClass + 12 - chord2[seven_idx].pitchClass)%12 > 2): # second (): #ForgiveBass
 						cost += _vl_nd7_not_resolved
 
-# non-dominant 7 preparation
+			# non-dominant 7 preparation
 			if not _rm2_is_dominant and rm2.containsSeventh():
 				seventh = chord2.seventh
 				seven_idx = pchord2.index(seventh)
 				if pchord1[seven_idx] != seventh and (seven_idx != 0 or chord1[seven_idx].name == seventh.name): #ForgiveBass && does not allow enharmonic equivalent (respelling) preparation.
 					cost += _vl_nd7_not_prepared
 			# GENERIC
-# VOICE CROSSING
+			# VOICE CROSSING
 			cost += _vl_voice_crossing * ((chord1[0]>chord2[1])+(chord1[1]<chord2[0]) + (chord1[1]>chord2[2])+(chord1[2]<chord2[1]) + (chord1[2]>chord2[3])+(chord1[3]<chord2[2]))
-# LEAPS 	# Avoid big leaps (generally). Octave leaps in bass is ok. Extra penalty for dissonant leaps, semitone-steps are not considered dissonant leaps
+			# LEAPS: Avoid big leaps (generally). Octave leaps in bass is ok. Extra penalty for dissonant leaps, semitone-steps are not considered dissonant leaps
 			diffs = [ (abs(i.generic.value), not(i.specifier in {Specifier.PERFECT, Specifier.MAJOR, Specifier.MINOR} or i.generic.value==1)) for i in (Interval(noteStart=chord1[i], noteEnd=chord2[i]) for i in range(4)) ]
 			cost += ((0 if diffs[0][0] <= 5 or diffs[0][0] == 8     else                                                                    _vl_bass_leap_gt5    if diffs[0][0] <  8 else _vl_bass_leap_gt8)    + _vl_bass_leap_dissonant    * diffs[0][1]  # Bass
 					+ (0 if diffs[1][0]<= 2 else _vl_tenor_leap_3   if diffs[1][0] == 3 else _vl_tenor_leap_4to5   if diffs[1][0] <= 5 else _vl_tenor_leap_gt5   if diffs[1][0] <= 8 else _vl_tenor_leap_gt8)   + _vl_tenor_leap_dissonant   * diffs[1][1]  # Tenor
 					+ (0 if diffs[2][0]<= 2 else _vl_alto_leap_3    if diffs[2][0] == 3 else _vl_alto_leap_4to5    if diffs[2][0] <= 5 else _vl_alto_leap_gt5    if diffs[2][0] <= 8 else _vl_alto_leap_gt8)    + _vl_alto_leap_dissonant    * diffs[2][1]  # Alto
 					+ (0 if diffs[3][0]<= 2 else _vl_soprano_leap_3 if diffs[3][0] == 3 else _vl_soprano_leap_4to5 if diffs[3][0] <= 5 else _vl_soprano_leap_gt5 if diffs[3][0] <= 8 else _vl_soprano_leap_gt8) + _vl_soprano_leap_dissonant * diffs[3][1]) # Soprano
-	# prefer bass leaping down octave over bass leaping up.
+			# prefer bass leaping down octave over bass leaping up.
 			if diffs[0][0]==8 and Interval(noteStart=chord1[0],noteEnd=chord2[0]).direction.value==1: cost += _vl_bass_leaps_octave_up
-# Repeated Chord (Special Case)
+			# SPECIAL CASE (REPEATED CHORD)
 			if rm1==rm2 and diffs[3][0]==1 and diffs[2][0]==1 and diffs[1][0]==1: cost += _vl_repeated_chord_static
-# PARALLELISMS
+			# PARALLELISMS
 			for i in range(3): # the i=3 (range(4)) case is degenerate.
 				i1, i2 = pchord1[i].midi, pchord2[i].midi
 				if i1 == i2: continue # oblique motion
 				for j in range(i+1, 4):
 					j1, j2 = pchord1[j].midi, pchord2[j].midi
-	# Parallel or Contrary fifths or octaves check.
+					# Parallel or Contrary fifths or octaves check.
 					if (j1-i1)%12 == (j2-i2)%12 and (j1-i1)%12 in {0, 7}:
 						cost += _vl_parallelism_outer if (i==0 and j==3) else _vl_parallelism
-	# Unequal 5ths. Bass & another voice has a º5 -> P5. (double not oblique voices)
+					# Unequal 5ths. Bass & another voice has a º5 -> P5. (double not oblique voices)
 					if i == 0 and j1 != j2 and (j1-i1)%12==6 and (j2-i2)%12==7:
 						cost += _vl_unequal_5_outer if j==3 else _vl_unequal_5
-	# DIRECT/HIDDEN: Outer voices move in similar motion into P5 or P8 and soprano has a leap.
+			# DIRECT/HIDDEN: Outer voices move in similar motion into P5 or P8 and soprano has a leap.
 			s1, s2, b1, b2 = pchord1[3].midi, pchord2[3].midi, pchord1[0].midi, pchord2[0].midi
 			if abs(s2-s1) > 2 and (s2-b2)%12 in {0,7}: cost += 80
-# Static melody in soprano
+			# Static melody in soprano
 			if s2 == s1: cost += _vl_melody_static
-# OUTER VOICES SHOULD NOT SIMILAR MOTION (should be incontrary motion instead)
+			# OUTER VOICES SHOULD NOT SIMILAR MOTION (should be incontrary motion instead)
 			if Interval(noteStart=chord1[3], noteEnd=chord2[3]).direction.value * Interval(noteStart=chord1[0], noteEnd=chord2[0]).direction.value == 1: cost += _vl_outer_voices_similar_motion
 			return cost
 
 		return _voiceLeadingCost
 
 	def _voiceLeadingCostDebug(self, chord1, rm1, chord2, rm2):
-		"""DEBUG METHOD"""
+		"""This method provides a voiceLeadingCost function pre-loaded with roman numerals."""
+		# Strategy: separate out into rm1-dominant, rm1-nondominan, and either-way groups??
 
 		# OVERHEAD
 		_rm1_key = rm1.secondaryRomanNumeralKey if rm1.secondaryRomanNumeral else rm1.key
