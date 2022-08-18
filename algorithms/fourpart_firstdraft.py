@@ -1,3 +1,8 @@
+'''
+Make sure to use docstrings consistently and where appropriate. Consult https://peps.python.org/pep-0257/ for examples
+'''
+
+
 from itertools import permutations
 from copy import deepcopy
 from fractions import Fraction
@@ -20,7 +25,7 @@ import settings
 
 
 DEBUG = True
-import time
+import time # put this import statement with the rest
 def dbg(msg):
 	if DEBUG:
 		print("DBG:", msg)
@@ -31,6 +36,9 @@ def dbg(msg):
 
 # alternative to pitchClass, returns 0..6 for C..B (for comparison purposes)
 def scale_value(note_name):
+	# consider using a dict here for constant-time lookup?
+	# e.g. {"c": 0, "d": 1, "e": 2, "f": 3, ...}
+	# and return dct[note_name[0]]
 	return ['C', 'D', 'E', 'F', 'G', 'A', 'B'].index(note_name[0].upper())
 
 class Solfege(IntEnum):
@@ -43,54 +51,56 @@ class Solfege(IntEnum):
 	TI = 6
 
 
-class Voice(object):
+class Voice(object): # consider using the dataclasses.dataclass decorator to provide an automatic init of class vars.
+					 # consult https://stackoverflow.com/questions/48285048/is-there-a-shorthand-initializer-in-python/48285480#48285480
 
-	def __init__(self, **kwargs):
+	def __init__(self,
+				 is_bounded_above=False, is_bounded_below=False,
+				 range_max=None, range_min=None,
+				 range_max_allowable=None, range_min_allowable=None):
 		# range_max=None, range_min=None, range_max_allowable=None, range_min_allowable=None
 		# These are music21.pitch.Pitch objects
-		self.is_bounded_above = False
-		self.is_bounded_below = False
-		self.range_max = None
-		self.range_min = None
-		self.range_max_allowable = None
-		self.range_min_allowable = None
+		self.is_bounded_above = is_bounded_above
+		self.is_bounded_below = is_bounded_below
 
-		if kwargs.get('range_max'):
-			self.range_max = kwargs.get('range_max')
+		if range_max:
+			self.range_max = range_max
 			self.is_bounded_above = True
-			if kwargs.get('range_max_allowable'):
+			if range_max_allowable:
 				# Comparison note: when a !>= b and b !>= a (e.g. a==b), then min/max prefers the first value.
 				# This is important for enharmonic spellings of pitches
-				self.range_max_allowable = max(kwargs.get('range_max_allowable'), self.range_max)
+				self.range_max_allowable = max(range_max_allowable, range_max)
 			else:
-				self.range_max_allowable = self.range_max
-		elif kwargs.get(r'ange_max_allowable'):
-			self.range_max = kwargs.get('range_max_allowable')
-			self.range_max_allowable = self.range_max
+				self.range_max_allowable = range_max_allowable
+			# you could also use a ternary operator here, e.g.
+			# self.range_max_allowable = max(range_max_allowable, range_max) if range_max_allowable else range_max
+			# but it sacrifices readability
+		elif range_max_allowable:
+			self.range_max = self.range_max_allowable = range_max_allowable # more concise declaration
 			self.is_bounded_above = True
 
-		if kwargs.get('range_min'):
-			self.range_min = kwargs.get('range_min')
+		if range_min:
+			self.range_min = range_min
 			self.is_bounded_below = True
-			if kwargs.get('range_min_allowable'):
-				self.range_min_allowable = min(kwargs.get('range_min_allowable'), self.range_min)
+			if range_min_allowable:
+				self.range_min_allowable = min(range_min_allowable, range_min)
 			else:
-				self.range_min_allowable = self.range_min
-		elif kwargs.get('range_min_allowable'):
-			self.range_min = kwargs.get('range_min_allowable')
-			self.range_min_allowable = self.range_min
+				self.range_min_allowable = range_min
+			# see above comment on ternary operator
+		elif range_min_allowable:
+			self.range_min = self.range_min_allowable = range_min_allowable
 			self.is_bounded_below = True
 	
 	def set_range_max(self, pitch):
 		self.range_max = pitch
-		self.range_max_allowable = max(self.range_max_allowable, self.range_max)
+		self.range_max_allowable = max(self.range_max_allowable, pitch)
 
 	def set_range_max_allowable(self, pitch):
 		self.range_max_allowable = max(pitch, self.range_max)
 
 	def set_range_min(self, pitch):
 		self.range_min = pitch
-		self.range_min_allowable = max(self.range_min_allowable, self.range_min)
+		self.range_min_allowable = max(self.range_min_allowable, pitch)
 
 	def set_range_min_allowable(self, pitch):
 		self.range_min_allowable = max(pitch, self.range_min)
@@ -99,7 +109,7 @@ class Voice(object):
 		# checks if pitch is in allowable range
 		return self.range_min_allowable.midi <= pitch.midi <= self.range_max_allowable.midi
 
-	def in_range_strict (self, pitch):
+	def in_range_strict(self, pitch): # remove space
 		# checks if pitch is in common range
 		return self.range_min.midi <= pitch.midi <= self.range_max.midi
 
@@ -134,7 +144,7 @@ class Voice(object):
 		return res
 
 	def query_gen(self, p, range_min=None, range_max=None): # p is pitchClass, range_min and range_max are optional extra limits.
-
+		# line-break this docstring
 		"""Query all notes in range of a certain pitch-class AS A GENERATOR. The cost of being outside common range is not calculated at this point, saved for later (cf. query_all)."""
 		
 		if not self.is_bounded_above:
@@ -149,6 +159,7 @@ class Voice(object):
 			range_max = min(self.range_max_allowable, range_max)
 		else:
 			range_max = self.range_max_allowable
+		# again, see ternary operator comment
 
 		# We start checking from the same octave as the range min
 		p.octave = range_min.octave
@@ -158,7 +169,7 @@ class Voice(object):
 				yield p
 			p.octave += 1
 
-	def query_free(self, pitchClass):
+	def query_free(self, p): # typo? did you mean to type "p" as a parameter instead?
 
 		"""Query all notes in the common range of a certain pitch-class. These are free (no cost)."""
 		
@@ -171,7 +182,7 @@ class Voice(object):
 		res = [] # results
 		while (p.midi <= self.range_max.midi):
 			if (p.midi >= self.range_min.midi):
-				res.append(deepcopy(p))
+				res.append(deepcopy(p)) # if there is no cost, why do you assign a tuple (deepcopy(p), 0) in the query_all() method and not here?
 			p.octave += 1
 		return res
 
@@ -185,6 +196,7 @@ class SATB(object):
 		self.bass = Voice(range_max=settings.B_RMX, range_min=settings.B_RMN, range_max_allowable=settings.B_RAMX, range_min_allowable=settings.B_RAMN)
 
 		# shortcuts:
+		# if you use shorter names to refer to the "real" class variables, why don't you just initialize the shorter names directly?
 		self.S = self.soprano
 		self.A = self.alto
 		self.T = self.tenor
@@ -204,6 +216,7 @@ class SATB(object):
 		# fetches appropriate octave value one voice down. (prevents overlapping and spacing errors)
 		# note: same note twice means go an octave down, hence the strict inequality (<)
 		nextOctaveDown = lambda new_name, last_pitch: last_pitch.octave if scale_value(new_name) < scale_value(last_pitch.name) else last_pitch.octave-1
+		# anonymous functions are nice, but this line is unclear imo. maybe just use a normal function; you're already using it like one anyway
 
 		# Strategy: try a random Soprano note and use spacing rules to go down,
 		# for Alto and Tenor there is basically only one correct choice; we are locked in.
@@ -220,6 +233,7 @@ class SATB(object):
 				for b in self.B.query_gen(Pitch(bass), range_max=t.transpose('-m2'), range_min=t.transpose('-P15')):
 					yield Chord(deepcopy([b,t,a,s]))
 
+	# be consistent with PEP8: https://peps.python.org/pep-0008/#function-and-variable-names
 	def voiceChord(self, rm): # roman numeral
 		"""Generates possible 4-part voicings for a triad or seventh chord.
 		   Secondary dominants should be given in the key they tonicize, rather than the home key of the progression"""
@@ -232,6 +246,7 @@ class SATB(object):
 			LT = rm.secondaryRomanNumeralKey.getLeadingTone().name
 		else:
 			LT = rm.key.getLeadingTone().name # Leading Tone
+		# consider: LT = (rm.secondaryRomanNumeralKey if rm.secondaryRomanNumeral else rm.key).getLeadingTone().name
 
 		# print(LT) # debug
 		
@@ -272,7 +287,7 @@ class SATB(object):
 				if rm.fifth.name != LT:
 					yield from self._generate_voicings(chordMembers + [rm.fifth.name])
 
-	def chordCost(self, chord, rm, last_chord=False):
+	def chordCost(self, chord, rm, last_chord=False): # again, PEP8
 		"""This method computes the cost of chord voicing infractions
 		   and is run once on every chord.
 		   Its purpose is to encourage some voicings over others."""
@@ -327,7 +342,7 @@ class SATB(object):
 
 	# TODO: abstract all the penalty weight values to settings.py
 	@staticmethod
-	def voiceLeadingCost(chord1, rm1, chord2, rm2):
+	def voiceLeadingCost(chord1, rm1, chord2, rm2): # again, PEP8
 		"""This method computes the costs of voice leading infractions/violations
 		   and is run on every adjacent chord pair in a phrase."""
 		cost = 0
@@ -344,6 +359,8 @@ class SATB(object):
 		FT = ctx_scale[Solfege.DO].name # fa->mi tendency tone
 
 		# functions of chords (in fundamental terms, e.g. viiº42/V/V maps to vii=7)
+		# func1 and func2 are identical. why is there not only one? did you mean to type rm2 for func2?
+		# also, func may not be a good name
 		func1 = RomanNumeral(rm1.romanNumeralAlone).bassScaleDegreeFromNotation()
 		func2 = RomanNumeral(rm1.romanNumeralAlone).bassScaleDegreeFromNotation()
 
@@ -360,7 +377,7 @@ class SATB(object):
 				if lt_idx in [1, 2] and Pitch(ctx_scale[Solfege.SOL], octave=below(ctx_scale[Solfege.SOL], chord1[lt_idx])):
 					# ti->sol in inner voices (A & T): frustrated leading tone, minimal penalty
 					# penalty is more severe for dominant function chord1
-					cost += 2 + 2*(func1 in [5,7])
+					cost += 2 + 2*(func1 in [5,7]) # consider using a set instead of a list for membership tests, although your lists are small
 				else:
 					cost += 50 + (100*(func1 in [5,7])) * max(10*(func2 in [1,6]), 1)
 					# penalty is more severe for dominant function chord1 resolution, especially if it is part of a cadence, i.e. chord2 is I of VI
@@ -409,8 +426,10 @@ class SATB(object):
 		# note: to register dissonant leaps, use intervals instead of midi-semitone-distance.
 		# TODO: is it possible to define heuristics in which big leaps are ok/good?
 		# (size of interval-disregarding direction, bool: is dissonant interval[leap])
+		# the line below is pretty long. maybe break it up for readability?
 		diffs = [ (abs(i.generic.value), i.specifier not in [Specifier.PERFECT, Specifier.MAJOR, Specifier.MINOR]) for i in [Interval(noteStart=chord1[i], noteEnd=chord2[i]) for i in range(4)]]
 		# each line: penalty for skips + penalty for dissonances... for a each voice
+		# wtf
 		cost += ((0 if diffs[0][0] <= 5 or diffs[0][0] == 8 else 20 if diffs[0][0] < 8 else 100) + 50 * diffs[0][1] # Bass
 				+ (0 if diffs[1][0] <= 2 else 2 if diffs[1][0] == 3 else 10 if diffs[1][0] <= 5 else 20 if diffs[1][0] <= 8 else 100) + 50 * diffs[1][1] # Tenor
 				+ (0 if diffs[2][0] <= 2 else 2 if diffs[2][0] == 3 else 10 if diffs[2][0] <= 5 else 20 if diffs[2][0] <= 8 else 100) + 50 * diffs[2][1] # Alto
@@ -434,7 +453,7 @@ class SATB(object):
 		# direct (hidden) fifths: Outer voices move in similar motion into P5 or P8 and soprano has a leap.
 		# (1) also encourage contrary motion between bass and soprano via a small penalty for similar motion.
 		# (2) also encourage interesting melody by penalizing static soprano
-		ps1, ps2, pb1, pb2 = chord1[3].pitch.midi, chord2[3].pitch.midi, chord1[0].pitch.midi, chord2[0].pitch.midi
+		ps1, ps2, pb1, pb2 = chord1[3].pitch.midi, chord2[3].pitch.midi, chord1[0].pitch.midi, chord2[0].pitch.midi # the pb1 variable is unused. is this intentional? if so, use _
 		if abs(ps2-ps1) > 2 and (ps2-pb2)%12 in [0,7]:
 			# direct fifths
 			cost += 75
@@ -450,15 +469,30 @@ class SATB(object):
 				
 		return cost
 
+	# PEP8
 	def voicePhrase(self, phrase): # phrase: one phrase of roman numerals (presumably with some sort of cadence)
 		# stc = 3 # store top choices (not yet implemented, mess around with other pathfinding algs and optimize)
 
 		# O(L^2 N), L = max number of voicings per chord (~120), N = number of chords in phrase.
 		# the most expensive operation is progressionCost
 
+		# a lot of range(len(x)) is used in this method, but it may not be necessary.
+		# see https://stackoverflow.com/questions/19184335/is-there-a-need-for-rangelena for examples.
+		# I gave examples of equivalent expressions for vars DP and Mask immediately below.
+		# btw, remember PEP8 and use all lowercase for vars; all uppercase for constants.
+
+		# is there potential to use NumPy arrays instead of standard Python arrays? check if it is feasible and if the overhead from NumPy is worth it.
+		# NumPy has things like np.zeros(), masks, etc.
+		# e.g. for var DP, you could initialize like so:
+		# DP = np.empty((len(V[i], L)))
+		# DP[:] = np.NaN
+
 		L = len(phrase)
 		V = [list(self.voiceChord(rm)) for rm in phrase]
+		# what about [[None] * len(V[i])] * L?
+		# EDIT: possibly buggy; see https://stackoverflow.com/questions/240178/list-of-lists-changes-reflected-across-sublists-unexpectedly
 		DP = [[None for _ in range(len(V[i]))] for i in range(L)]
+		# same thing as above
 		Mask = [[True for _ in range(len(V[i]))] for i in range(L)] # DP MASK
 		
 		# first layer i=0, only chord cost, and no back reference.
@@ -512,6 +546,7 @@ class SATB(object):
 
 # Note: RomanNumeral.figure
 
+# PEP8
 def parseProgression(prog): # chord progression: str
 	prog = [l.strip().split(":") for l in prog.split("\n") if l.strip()]
 	phrases = []
@@ -522,7 +557,7 @@ def parseProgression(prog): # chord progression: str
 
 
 # credits to Eric Zhang @ github
-def generateScore(chords, lengths=None, ts="4/4"):
+def generateScore(chords, lengths=None, ts="4/4"): # PEP8
     """Generates a four-part score from a sequence of chords.
     Soprano and alto parts are displayed on the top (treble) clef, while tenor
     and bass parts are displayed on the bottom (bass) clef, with correct stem
@@ -532,7 +567,7 @@ def generateScore(chords, lengths=None, ts="4/4"):
         lengths = [1 for _ in chords]
     else: 
     	while len(lengths) < len(chords):
-    		lengths.extend(lengths)
+            lengths.extend(lengths)
     voices = [Voice21([Piano()]) for _ in range(4)]
     for chord, length in zip(chords, lengths):
         bass, tenor, alto, soprano = [
@@ -552,7 +587,7 @@ def generateScore(chords, lengths=None, ts="4/4"):
     return score
 
 
-def generateChorale(chorale, lengths=None, ts="4/4"):
+def generateChorale(chorale, lengths=None, ts="4/4"): # PEP8
 	phrases = parseProgression(chorale)
 	engine = SATB()
 	chord_progression = []
@@ -573,13 +608,13 @@ def generateChorale(chorale, lengths=None, ts="4/4"):
 	return chord_progression
 
 
-def chordProgressionToText(cp):
+def chordProgressionToText(cp): # ...
 	print("+S+ +A+ +T+ +B+")
 	for chord in cp:
 		print("{} {} {} {}".format(chord[3].nameWithOctave, chord[2].nameWithOctave, chord[1].nameWithOctave, chord[0].nameWithOctave))
 
 
-def textToChordProgression(txt):
+def textToChordProgression(txt): # ...
 	pass
 
 
