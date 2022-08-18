@@ -18,5 +18,8 @@ PostgreSQL tutorial: https://medium.com/cloud-tidbits/setup-django-with-postgres
 Find django source files (to find templates to override): `python -c "import django; print(django.__path__)"`
 
 **Todos:**
-- [] Learn how to write tests (automated testing) from [Django Tutorial](https://docs.djangoproject.com/en/4.1/intro/tutorial05/).
-- [] Customize 404/500 page: [Stack Overflow](https://stackoverflow.com/questions/17662928/django-creating-a-custom-500-404-error-page).
+- [ ] User authentication!
+- [ ] Database integration with `fourpart`
+- [ ] TailwindCSS integration and basic templates.
+- [ ] Learn how to write tests (automated testing) from [Django Tutorial](https://docs.djangoproject.com/en/4.1/intro/tutorial05/).
+- [ ] Customize 404/500 page: [Stack Overflow](https://stackoverflow.com/questions/17662928/django-creating-a-custom-500-404-error-page).
