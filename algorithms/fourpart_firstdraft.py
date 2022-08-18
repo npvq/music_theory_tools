@@ -490,6 +490,7 @@ class SATB(object):
 		L = len(phrase)
 		V = [list(self.voiceChord(rm)) for rm in phrase]
 		# what about [[None] * len(V[i])] * L?
+		# EDIT: possibly buggy; see https://stackoverflow.com/questions/240178/list-of-lists-changes-reflected-across-sublists-unexpectedly
 		DP = [[None for _ in range(len(V[i]))] for i in range(L)]
 		# same thing as above
 		Mask = [[True for _ in range(len(V[i]))] for i in range(L)] # DP MASK
