@@ -22,5 +22,10 @@ urlpatterns = [
 
     path('', home_view, name='home'), # or name='index'? whichever.
     path('4part/', include('fourpart.urls')),
+
     path('admin/', admin.site.urls),
+    path('auth/', include('allauth.urls')),
+
+    # TailwindCSS Configuration
+    path("__reload__/", include("django_browser_reload.urls")),
 ]

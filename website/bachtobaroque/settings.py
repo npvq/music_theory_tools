@@ -36,11 +36,26 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'django.contrib.sites', # needed by django-allauth
     'django.contrib.staticfiles',
 
     'polls.apps.PollsConfig',
     'fourpart.apps.FourpartConfig',
     'pages',
+
+    # django-tailwind
+    'tailwind',
+    'tailwindtheme',
+    'django_browser_reload', #for development mode?
+
+    # django-allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    # accepted social media providers
+    'allauth.socialaccount.providers.discord',
+    'allauth.socialaccount.providers.github',
+    'allauth.socialaccount.providers.google',
 ]
 
 MIDDLEWARE = [
@@ -51,6 +66,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    "django_browser_reload.middleware.BrowserReloadMiddleware",
 ]
 
 ROOT_URLCONF = 'bachtobaroque.urls'
@@ -63,7 +80,7 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
-                'django.template.context_processors.request',
+                'django.template.context_processors.request', # (also needed by django-allauth)
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -95,7 +112,6 @@ DATABASES = {
     }
 }
 
-
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
 
@@ -112,6 +128,15 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+]
+
+# django-allauth
+AUTHENTICATION_BACKENDS = [
+    # Needed to login by username in Django admin, regardless of `allauth`
+    'django.contrib.auth.backends.ModelBackend',
+
+    # `allauth` specific authentication methods, such as login by e-mail
+    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 
@@ -136,3 +161,15 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# TailwindCSS Setup
+
+TAILWIND_APP_NAME = 'tailwindtheme'
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
+
+# django-allauth
+SITE_ID = 2 #localhost (1 for deployment)
+

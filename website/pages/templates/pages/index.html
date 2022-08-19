@@ -1,7 +1,7 @@
+{% load static tailwind_tags %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
-  	{% load static %}
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
@@ -9,9 +9,7 @@
     <meta name="description" content="" />
     <meta name="keywords" content="" />
 
-    <link rel="stylesheet" href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css"/>
-    <!--Replace with your tailwind.css once created-->
-    <link href="https://unpkg.com/@tailwindcss/custom-forms/dist/custom-forms.min.css" rel="stylesheet" />
+    {% tailwind_css %}
 
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap");
@@ -63,7 +61,8 @@
             to test things!
           </h1>
           <p class="leading-normal text-base md:text-2xl mb-8 text-center md:text-left">
-            Nothing here is as it seems, but I need a landing page. Check this out though:
+            {% if user.is_authenticated %}
+            Welcome, {{ user.username }}. Nothing here is as it seems, but I need a landing page. Check this out though:
             <a
                 class="bg-gradient-to-r from-purple-800 to-green-500 hover:from-pink-500 hover:to-green-500 text-white font-bold py-2 px-4 rounded focus:ring transform transition hover:scale-105 duration-300 ease-in-out"
                 type="button"
@@ -71,6 +70,15 @@
               >
                 FourPart
               </a>
+            {% else %}
+            Nothing here is as it seems, but maybe that would change if you <a
+                class="bg-gradient-to-r from-purple-800 to-green-500 hover:from-pink-500 hover:to-green-500 text-white font-bold py-2 px-4 rounded focus:ring transform transition hover:scale-105 duration-300 ease-in-out"
+                type="button"
+                href="/auth/login"
+              >
+                Log In
+              </a>
+            {% endif %}
           </p>
 
           <form class="bg-gray-900 opacity-75 w-full shadow-lg rounded-lg px-8 pt-6 pb-8 mb-4">

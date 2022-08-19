@@ -1,9 +1,13 @@
+# UPDATE
+
+The Django project development is taking too long for me as a solo development team. For now, this website side of the project will be put on pause while I continue work on the algorithm side of the project.
+
 ## Architectural Notes
 
 Applications:
 - `pages`: for storing basic pages. There might be a `blog` app in the future as well
 - `fourpart`: for four-part computing functionalities (testing)
-- `polls`: 
+- `polls`: a test project with database models.
 
 ## Technical Notes
 
@@ -16,6 +20,8 @@ PostgreSQL tutorial: https://medium.com/cloud-tidbits/setup-django-with-postgres
 (`pip install psycopg2-binary`)
 
 Find django source files (to find templates to override): `python -c "import django; print(django.__path__)"`
+
+Also implemented `django-allauth` for an easier time with user management.
 
 **Todos:**
 - [ ] User authentication!
