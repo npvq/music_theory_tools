@@ -1,5 +1,3 @@
-from fourpart import FourPartChords, do_nothing
-
 from music21.note import Note
 from music21.pitch import Pitch, Accidental
 from music21.chord import Chord
@@ -12,6 +10,8 @@ from music21.clef import BassClef, TrebleClef
 from music21.layout import StaffGroup
 from music21.instrument import Piano
 from music21.stream import Part, Score, Voice
+
+from fourpart import FourPartChords, do_nothing
 
 """ Stuff is getting a bit out of hand here
 Conventions:
@@ -123,6 +123,28 @@ class FPChordsQuery(object):
 		return [[len(phrase_sol), [sol[1] for sol in phrase_sol]] for phrase_sol in self.data['solutions']]
 
 
+
+
+
+
+
+
+
+# ----------- Extra Debugging Utilities -----------
+def chordProgressionToText(cp):
+	s = []
+	s.append("+S+ +A+ +T+ +B+")
+	for chord in cp:
+		s.append("{} {} {} {}".format(chord[3].nameWithOctave, chord[2].nameWithOctave, chord[1].nameWithOctave, chord[0].nameWithOctave))
+	return '\n'.join(s)
+
+
+def textToChordProgression(txt):
+	lines = txt.split('\n')
+	if "+S+ +A+ +T+ +B+" in lines[0]:
+		lines.pop(0)
+	cp = [ Chord(line) for line in lines if len(line.split(" ")) == 4 ] # chord progression
+	return cp
 
 
 if __name__ == "__main__":
