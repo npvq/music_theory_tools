@@ -150,6 +150,12 @@ Lastly, when two simple root position triads (like `I IV`) are presented as the 
 
 Through experimentation, it was found that a good value for FirstBuffer is 10,000.
 
+#### Extracting Multiple Solutions
+
+One of the downsides of the DP algorithm implementation is the inability to locate an "equally good" or "second best" solution. Obvious ways of storing more than back-trackable voicing (bestCandidate) per chord will unanimously lead to an NP time algorithm, which is undesirable.
+
+Though a fundamental modification of the algorithm would an important topic in the future, for now we will determine how to make the best use of the information we have to introduce a bit of variety in our solutions. The key lies in our DP memoized table. Though we don't have access to the *next best* solution, we have access to as many solutions as there are final voicings, and each of them is optimal up to that final chord. If we sort those final solutions by their total costs and then filter them based off how good they are, either absolutely (e.g. ≤100 cost) or in comparison to the best solution (like the confidence x min_cost method), we will have access to a few other "decent" solutions.
+
 ### Python Implementation Optimizations
 
 Lastly, it is also important to note our fundamental limitation. Since this program heavily relies on `music21` so as to prevent re-inventing the wheel in basic music-theoretic constructs (e.g. enharmonic spellings, intervals, roman numeral identification). Hence, the speed of this program is limited by python's dynamically-typed interpreted nature and `music21`'s design as a flexibility-first and speed-second library (as compared to programming from scratch in C or Java).
@@ -158,15 +164,15 @@ However, there are various techniques to speed up the algorithm so it can run in
 
 First, upon inspecting the program, we notice that `voiceLeadingCost` is the most-frequently-run method during the DP algorithm. It could be called almost 10,000 times per pair of chords. And upon extensive testing, it becomes clear that `voiceLeadingCost` is the bottleneck of the program. It could be "slow" for a variety of reasons. First, it sets up key information about the two chords (such as their Roman Numerals, contextual keys, and the leading tone in the current key) that are independent of the voicings we receive as input. In other words, each call of `voiceLeadingCost` performs unnecessary, repeated computations. Another potential reason is because repeatedly accessing class data elements such as the `config` dictionary can be much slower in Python compared to accessing local variables. 
 
-One potential fix is to design a "factory function." Since, in the DP protocol, different voicings between the same two chords are put through the `voiceLeadingCost` function up to 10,000 times, we can precompute the chord information and other necessary results that will remain constant. Essentially, we pass information about the two chords to a factory function, which then constructs and returns a static function that quickly computes the voiceLeadingCost of any two voicings *of those two chords specifically*. This extracts redundant computations from the innter `voiceLeadingCost` function, doing a little extra work in order to compute these voicing-independent results once instead of 10,000 times. Furthermore, in this factory function we can also extract the necessary parameters from `SATB.config` and store them as local variables, which will be preserved in the inner function by *closure* (thankfully!). This solution was able to speed up the amortized time-per-call on my machine by about 8 times, which reduced the benchmark running time from minutes to seconds. Without using more powerful tools like `cpython` or `PyPy`, I am quite satisfied with the result we were able to get.
+One potential fix is to design a "factory function." Since, in the DP protocol, different voicings between the same two chords are put through the `voiceLeadingCost` function up to 10,000 times, we can precompute the chord information and other necessary results that will remain constant. Essentially, we pass information about the two chords to a factory function, which then constructs and returns a static function that quickly computes the voiceLeadingCost of any two voicings *of those two chords specifically*. This extracts redundant computations from the innter `voiceLeadingCost` function, doing a little extra work in order to compute these voicing-independent results once instead of 10,000 times. Furthermore, in this factory function we can also extract the necessary parameters from `FourPart.config` and store them as local variables, which will be preserved in the inner function by *closure* (thankfully!). This solution was able to speed up the amortized time-per-call on my machine by about 8 times, which reduced the benchmark running time from minutes to seconds. Without using more powerful tools like `cpython` or `PyPy`, I am quite satisfied with the result we were able to get.
 
-## Configuration of `SATB` Class Object
+## Configuration of `FourPart` Class Object
 
-The SATB class organizes methods and configuration data on an object-basis, allowing various function calls to utilize individual configurations. The configurations are passed in during initialization as *keyword arguments*. Once initialized, these parameters are not meant to be changed; however, they could still be modified as a dictionary located at `SATB.config`, just note that these changes may not take effect everywhere.
+The `FourPart` (Formerly `SATB`, is a family of classes collectively referred to as `FourPart`) class organizes methods and configuration data on an object-basis, allowing various function calls to utilize individual configurations. The configurations are passed in during initialization as *keyword arguments*. Once initialized, these parameters are not meant to be changed; however, they could still be modified as a dictionary located at `FourPart.config`, just note that these changes may not take effect everywhere.
 
-It is possibile to allow for the updating of the configuration dictionary, especially as the SATB object becomes large and hence expensive to create and worthy of reuse.
+It is possibile to allow for the updating of the configuration dictionary, especially as the `FourPart` object becomes large and hence expensive to create and worthy of reuse.
 
-The following sections detail the currently existing configuration parameters for `SATB`.
+The following sections detail the currently existing configuration parameters for `FourPart`.
 
 > NOTE: the default values may not be up to date.
 
@@ -304,6 +310,15 @@ fa->mi is not held universally, as it most often concerns the V7 and viiº (thin
 ##### Music21 Optimizations
 
 Finally, regarding `Music21`, which tends to be a little slow as it prefers flexibility to speed, [this article](http://dmitri.mycpanel.princeton.edu/music21.pdf) offers some advice on speeding up Music21. Command+F the search term "speed" to find.
+
+
+##### PySimpleGUI References:
+
+https://www.pysimplegui.org/en/latest/call%20reference/
+https://github.com/PySimpleGUI/PySimpleGUI/issues/1077 # make window active
+https://github.com/PySimpleGUI/PySimpleGUI/blob/master/DemoPrograms/Demo_MIDI_Player.py
+https://stackoverflow.com/questions/30669015/autoscroll-of-text-and-scrollbar-in-python-text-box # multiline scrolling
+
 
 
 <!-- Footnotes -->
