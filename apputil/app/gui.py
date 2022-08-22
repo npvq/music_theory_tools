@@ -3,7 +3,8 @@ from collections import defaultdict
 import shutil
 # from pathlib import Path
 
-from app.guiWindowManager import WindowManager, MultiPageWindow
+from app.windowmanager import WindowManager
+from app.MultiPageWindow
 
 from fourpart import FourPartChords
 from fourpart.utils import FPChordsQuery
@@ -18,7 +19,7 @@ global_font_size = 14
 sg.set_options(font=(global_font_family, global_font_size))
 
 sg.set_options(use_custom_titlebar=True, alpha_channel=0.8) # breaks "Resizable," https://github.com/PySimpleGUI/PySimpleGUI/issues/5252
-sg.set_options(icon='/Users/darren/github/bachtobaroque/algorithms/Static/favicon.png')
+#sg.set_options(icon='/Users/darren/github/bachtobaroque/algorithms/Static/favicon.png')
 sg.set_options(suppress_raise_key_errors=False, suppress_error_popups=True, suppress_key_guessing=True)
 
 # good themes: LightBlue and LightGrey2

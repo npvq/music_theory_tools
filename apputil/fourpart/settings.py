@@ -20,6 +20,7 @@ See Algorithm README for more information on config specification.
 
 # ----- 3RD PARTY IMPORTS ----- #
 
+# Note: only part used, imported like this for convenience.
 from music21.pitch import Pitch
 
 # ----- LOCAL IMPORTS ----- #
@@ -30,7 +31,7 @@ from music21.pitch import Pitch
 
 default_config = {
 	# voice ranges
-	'soprano_range_min':Pitch("E4"), # Pitch("C4"), # canonical, but a little too low and squishes other voices
+	'soprano_range_min': Pitch("E4"), # pitch.Pitch("C4"), # canonical, but a little too low and squishes other voices
 	'soprano_range_max': Pitch("G5"),
 	'soprano_range_min_allowable': Pitch("B3"),
 	'soprano_range_max_allowable': Pitch("A5"),
@@ -39,7 +40,7 @@ default_config = {
 	'alto_range_min_allowable': Pitch("G3"),
 	'alto_range_max_allowable': Pitch("D5"),
 	'tenor_range_min': Pitch("C3"),
-	'tenor_range_max': Pitch("E4"), # Pitch("G4"), # canonical is G4, but limited to prevent tenor too high
+	'tenor_range_max': Pitch("E4"), # pitch.Pitch("G4"), # canonical is G4, but limited to prevent tenor too high
 	'tenor_range_min_allowable': Pitch("C3"),
 	'tenor_range_max_allowable': Pitch("A4"),
 	'bass_range_min': Pitch("E2"),

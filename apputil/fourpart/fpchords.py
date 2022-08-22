@@ -1,29 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+ #--------------#
+# Author:  @npvq #
+# Licence: GPLv3 #
+ #--------------#
+
+ #===================#
+# FourPartChords File #
+ #===================#
 
 # ----- SYSTEM IMPORTS -----
 
+from fractions import Fraction
+from itertools import permutations
+from copy import deepcopy
 
+# Debugging/Logging
+import time
 
 # ----- 3RD PARTY IMPORTS -----
 
-# --MUSIC21
-from music21.note import Note
-from music21.pitch import Pitch, Accidental
-from music21.chord import Chord
-from music21.roman import RomanNumeral
-from music21.key import Key, KeySignature
-from music21.interval import Interval, Specifier
-
-# --MUSIC21 for exporting
-# from music21.meter import TimeSignature
-# from music21.clef import BassClef, TrebleClef
-# from music21.instrument import Piano
-# from music21.stream import Part, Score, Voice
+# from music21 import (
+# 	pitch, chord, roman, key, interval, # MUSIC21 fundamentals
+# )
+import music21 as mus # unfortunately it is necessary
 
 # ----- LOCAL IMPORTS -----
 
-from fourpart import do_nothing
+from fourpart import do_nothing, octaveAbove, octaveBelow, nextOctaveDown, dominantScaleDegrees, tonicScaleDegrees
 from fourpart.base import FourPartBaseObject
 
 # ------------------------------ #
@@ -46,7 +50,7 @@ class FourPartChords(FourPartBaseObject):
 
 		# stores needed configurations as local variables for speed optimization
 		_midi_ranges = [[p.midi for p in v] for v in self.ranges]
-		_config = {k:v for k,v in self.config.items() if k.startswith('ch_')}
+		_config = {k:v for k,v in self.config.items() if k.startswith('ch_')} # 'ch_': chord cost configs
 
 		# output function is static (class configured and class independent)
 		def _chordCost(chord, rm, last_chord=False):
@@ -106,11 +110,12 @@ class FourPartChords(FourPartBaseObject):
 		_rm1_key = rm1.secondaryRomanNumeralKey if rm1.secondaryRomanNumeral else rm1.key
 		_rm2_key = rm2.secondaryRomanNumeralKey if rm2.secondaryRomanNumeral else rm2.key
 		# Functional
+		# NOTE: outdated. Should be replaced with new chord-based function model soon.
 		func1 = (lambda n: n[1].modifier+str(n[0]) if n[1] else str(n[0]))(rm1.scaleDegreeWithAlteration)
 		func2 = (lambda n: n[1].modifier+str(n[0]) if n[1] else str(n[0]))(rm2.scaleDegreeWithAlteration)
-		_rm1_is_dominant = func1 in _dominant[_rm1_key.mode]
-		_rm2_is_dominant = func2 in _dominant[_rm2_key.mode]
-		_rm2_is_tonic = func2 in _tonic[_rm2_key.mode]
+		_rm1_is_dominant = func1 in dominantScaleDegrees[_rm1_key.mode]
+		_rm2_is_dominant = func2 in dominantScaleDegrees[_rm2_key.mode]
+		_rm2_is_tonic = func2 in tonicScaleDegrees[_rm2_key.mode]
 		# rm1 might resolve to rm2 as a secondary dominant rather than a cadence.
 		_resolves = _rm1_is_dominant and (_rm1_key.tonic.name == _rm2_key.getDominant().name if rm1.secondaryRomanNumeral else _rm2_is_tonic)
 		# Scale/pitch related
@@ -121,11 +126,11 @@ class FourPartChords(FourPartBaseObject):
 		_DO = _rm1_scale[0]
 		_SOL = _rm1_scale[4]
 		_MI = _rm1_scale[2]
-		# make local function (save reference): optimization
-		_above = aboveOctave
-		_below = belowOctave
+		# make local function reference (save reference): optimization... is it really necessary?
+		_above = octaveAbove
+		_below = octaveBelow
 
-		# preload configs
+		# preload configs ('vl_': voice leading configs)
 		_config = {k:v for k,v in self.config.items() if k.startswith('vl_')}
 		# NOTE: might be a little slower than manually preloading config variables as local variables, but this way is much more maintainable (and preserves sanity)
 
@@ -145,9 +150,11 @@ class FourPartChords(FourPartBaseObject):
 				# ti->ti or ti->do (ti->sol)
 				if _LT in chord1.pitchNames:
 					lt_idx = chord1.pitchNames.index(_LT) # leadingtone_index : there can only be one.
-					if pchord2[lt_idx] not in (pchord1[lt_idx], Pitch(_DO, octave=_above(_DO, pchord1[lt_idx]))) and (lt_idx != 0 or chord2[0].name not in {_LT, _DO.name}): #ForgiveBass if it is *not* at all possible to resolve/sustain
+					if ( pchord2[lt_idx] not in (pchord1[lt_idx], mus.pitch.Pitch(_DO, octave=_above(_DO, pchord1[lt_idx])))
+					and (lt_idx != 0 or chord2[0].name not in {_LT, _DO.name}) ): #ForgiveBass if it is *not* at all possible to resolve/sustain
+						
 						# FRUSTRATED LEADING TONE (inner voice)
-						if lt_idx in {1, 2} and Pitch(_SOL, octave=_below(_SOL, chord1[lt_idx])): 
+						if lt_idx in {1, 2} and mus.pitch.Pitch(_SOL, octave=_below(_SOL, chord1[lt_idx])):
 							cost += _config['vl_frustrated_lt_dominant']
 						else: 
 							cost += _config['vl_lt_violation_dominant'] * (_config['vl_lt_tt_violation_cadential_multiplier'] if _resolves else 1)
@@ -155,15 +162,20 @@ class FourPartChords(FourPartBaseObject):
 				if not _rm2_is_dominant: # alternate condition: if _resolves. Note: even in resolution, Dom/V -> i64 can have the "fa" held/sustained before resolving to "mi."
 					if _FT in chord1.pitchNames: # possibly more than one
 						for ft_idx, p in enumerate(chord1.pitchNames):
-							if p == _FT and pchord2[ft_idx] not in (chord1[ft_idx].pitch, Pitch(_MI, octave=_below(_MI, pchord1[ft_idx]))) and (ft_idx != 0 or chord2[ft_idx].name == _MI.name): #ForgiveBass
-									cost += _config['vl_dominant_tt_not_resolved'] * (_config['vl_lt_tt_violation_cadential_multiplier'] if _resolves else 1)
+							if ( p == _FT and pchord2[ft_idx] not in (chord1[ft_idx].pitch, mus.pitch.Pitch(_MI, octave=_below(_MI, pchord1[ft_idx]))) 
+							and (ft_idx != 0 or chord2[ft_idx].name == _MI.name) ): #ForgiveBass
+
+								cost += _config['vl_dominant_tt_not_resolved'] * (_config['vl_lt_tt_violation_cadential_multiplier'] if _resolves else 1)
+			
 			else: # rm1 not dominant
 				# ti->ti or ti->do (ti->sol)
 				if _LT in chord1.pitchNames:
 					lt_idx = chord1.pitchNames.index(_LT) # leadingtone_index : there can only be one.
-					if pchord2[lt_idx] not in (pchord1[lt_idx], Pitch(_DO, octave=_above(_DO, pchord1[lt_idx]))) and (lt_idx != 0 or chord2[0].name not in {_LT, _DO.name}): #ForgiveBass if it is *not* at all possible to resolve/sustain
+					if ( pchord2[lt_idx] not in (pchord1[lt_idx], mus.pitch.Pitch(_DO, octave=_above(_DO, pchord1[lt_idx])))
+					and (lt_idx != 0 or chord2[0].name not in {_LT, _DO.name}) ): #ForgiveBass if it is *not* at all possible to resolve/sustain
+						
 						# FRUSTRATED LEADING TONE (inner voice)
-						if lt_idx in {1, 2} and Pitch(_SOL, octave=_below(_SOL, chord1[lt_idx])): 
+						if lt_idx in {1, 2} and mus.pitch.Pitch(_SOL, octave=_below(_SOL, chord1[lt_idx])): 
 							cost += _config['vl_frustrated_lt']
 						else:
 							cost += _config['vl_lt_violation']
@@ -173,14 +185,19 @@ class FourPartChords(FourPartBaseObject):
 					seventh = chord1.seventh
 					seven_idx = pchord1.index(seventh) # (seventh cannot be doubled, so is unique)
 					# Resolutions have to go down a m2 or M2.
-					if not (seventh == pchord2[seven_idx] or Interval(noteStart=chord2[seven_idx], noteEnd=chord1[seven_idx]).name in {'m2','M2'}) and (seven_idx != 0 or (seventh.pitchClass + 12 - pchord2[seven_idx].pitchClass)%12 > 2): # second (): #ForgiveBass
+					if ( not (seventh == pchord2[seven_idx] or mus.interval.Interval(noteStart=chord2[seven_idx], noteEnd=chord1[seven_idx]).name in {'m2','M2'})
+					and (seven_idx != 0 or (seventh.pitchClass + 12 - pchord2[seven_idx].pitchClass)%12 > 2) ): #ForgiveBass
+						
 						cost += _config['vl_nd7_not_resolved']
 
 			# non-dominant 7 preparation
 			if not _rm2_is_dominant and rm2.containsSeventh():
 				seventh = chord2.seventh
 				seven_idx = pchord2.index(seventh)
-				if pchord1[seven_idx] != seventh and (seven_idx != 0 or chord1[seven_idx].name == seventh.name): #ForgiveBass && does not allow enharmonic equivalent (respelling) preparation.
+
+				if ( pchord1[seven_idx] != seventh
+				and (seven_idx != 0 or chord1[seven_idx].name == seventh.name) ): #ForgiveBass && does not allow enharmonic equivalent (respelling) preparation.
+					
 					cost += _config['vl_nd7_not_prepared']
 			
 			# (GENERIC)
@@ -188,14 +205,15 @@ class FourPartChords(FourPartBaseObject):
 			cost += _config['vl_voice_crossing'] * ((chord1[0]>chord2[1])+(chord1[1]<chord2[0]) + (chord1[1]>chord2[2])+(chord1[2]<chord2[1]) + (chord1[2]>chord2[3])+(chord1[3]<chord2[2]))
 			
 			# LEAPS: Avoid big leaps (generally). Octave leaps in bass is ok. Extra penalty for dissonant leaps, semitone-steps are not considered dissonant leaps (d2s not yet considered)
-			diffs = [ (abs(i.generic.value), not(i.specifier in {Specifier.PERFECT, Specifier.MAJOR, Specifier.MINOR} or i.generic.value==1)) for i in (Interval(noteStart=chord1[i], noteEnd=chord2[i]) for i in range(4)) ]
-			cost += ((0 if diffs[0][0] <= 5 or diffs[0][0] == 8     else                                                                    _config['vl_bass_leap_gt5']    if diffs[0][0] <  8 else _config['vl_bass_leap_gt8'])    + _config['vl_bass_leap_dissonant']    * diffs[0][1]  # Bass
+			diffs = [ (abs(i.generic.value), not(i.specifier in {mus.interval.Specifier.PERFECT, mus.interval.Specifier.MAJOR, mus.interval.Specifier.MINOR} or i.generic.value==1))
+					  for i in (mus.interval.Interval(noteStart=chord1[j], noteEnd=chord2[j]) for j in range(4)) ]
+			cost += ((0 if diffs[0][0] <= 5 or diffs[0][0] == 8               else                                                                              _config['vl_bass_leap_gt5']    if diffs[0][0] <  8 else _config['vl_bass_leap_gt8'])    + _config['vl_bass_leap_dissonant']    * diffs[0][1]  # Bass
 					+ (0 if diffs[1][0]<= 2 else _config['vl_tenor_leap_3']   if diffs[1][0] == 3 else _config['vl_tenor_leap_4to5']   if diffs[1][0] <= 5 else _config['vl_tenor_leap_gt5']   if diffs[1][0] <= 8 else _config['vl_tenor_leap_gt8'])   + _config['vl_tenor_leap_dissonant']   * diffs[1][1]  # Tenor
 					+ (0 if diffs[2][0]<= 2 else _config['vl_alto_leap_3']    if diffs[2][0] == 3 else _config['vl_alto_leap_4to5']    if diffs[2][0] <= 5 else _config['vl_alto_leap_gt5']    if diffs[2][0] <= 8 else _config['vl_alto_leap_gt8'])    + _config['vl_alto_leap_dissonant']    * diffs[2][1]  # Alto
 					+ (0 if diffs[3][0]<= 2 else _config['vl_soprano_leap_3'] if diffs[3][0] == 3 else _config['vl_soprano_leap_4to5'] if diffs[3][0] <= 5 else _config['vl_soprano_leap_gt5'] if diffs[3][0] <= 8 else _config['vl_soprano_leap_gt8']) + _config['vl_soprano_leap_dissonant'] * diffs[3][1]) # Soprano
 			
 			# prefer bass leaping down octave over bass leaping up.
-			if diffs[0][0]==8 and Interval(noteStart=chord1[0],noteEnd=chord2[0]).direction.value==1:
+			if diffs[0][0]==8 and mus.interval.Interval(noteStart=chord1[0],noteEnd=chord2[0]).direction.value==1:
 				cost += _config['vl_bass_leaps_octave_up']
 			
 			# SPECIAL CASE (REPEATED CHORD)
@@ -227,7 +245,7 @@ class FourPartChords(FourPartBaseObject):
 				cost += _config['vl_melody_static']
 			
 			# OUTER VOICES SHOULD NOT SIMILAR MOTION (should be incontrary motion instead)
-			if Interval(noteStart=chord1[3], noteEnd=chord2[3]).direction.value * Interval(noteStart=chord1[0], noteEnd=chord2[0]).direction.value == 1:
+			if mus.interval.Interval(noteStart=chord1[3], noteEnd=chord2[3]).direction.value * mus.interval.Interval(noteStart=chord1[0], noteEnd=chord2[0]).direction.value == 1:
 				cost += _config['vl_outer_voices_similar_motion']
 			
 			return cost
@@ -248,11 +266,12 @@ class FourPartChords(FourPartBaseObject):
 		_rm1_key = rm1.secondaryRomanNumeralKey if rm1.secondaryRomanNumeral else rm1.key
 		_rm2_key = rm2.secondaryRomanNumeralKey if rm2.secondaryRomanNumeral else rm2.key
 		# Functional
+		# NOTE: outdated. Should be replaced with new chord-based function model soon.
 		func1 = (lambda n: n[1].modifier+str(n[0]) if n[1] else str(n[0]))(rm1.scaleDegreeWithAlteration)
 		func2 = (lambda n: n[1].modifier+str(n[0]) if n[1] else str(n[0]))(rm2.scaleDegreeWithAlteration)
-		_rm1_is_dominant = func1 in _dominant[_rm1_key.mode]
-		_rm2_is_dominant = func2 in _dominant[_rm2_key.mode]
-		_rm2_is_tonic = func2 in _tonic[_rm2_key.mode]
+		_rm1_is_dominant = func1 in dominantScaleDegrees[_rm1_key.mode]
+		_rm2_is_dominant = func2 in dominantScaleDegrees[_rm2_key.mode]
+		_rm2_is_tonic = func2 in tonicScaleDegrees[_rm2_key.mode]
 		# rm1 might resolve to rm2 as a secondary dominant rather than a cadence.
 		_resolves = _rm1_is_dominant and (_rm1_key.tonic.name == _rm2_key.getDominant().name if rm1.secondaryRomanNumeral else _rm2_is_tonic)
 		# Scale/pitch related
@@ -263,11 +282,11 @@ class FourPartChords(FourPartBaseObject):
 		_DO = _rm1_scale[0]
 		_SOL = _rm1_scale[4]
 		_MI = _rm1_scale[2]
-		# make local function (save reference): optimization
-		_above = aboveOctave
-		_below = belowOctave
+		# make local function reference (save reference): optimization... is it really necessary?
+		_above = octaveAbove
+		_below = octaveBelow
 
-		# preload configs
+		# preload configs ('vl_': voice leading configs)
 		_config = {k:v for k,v in self.config.items() if k.startswith('vl_')}
 		# NOTE: might be a little slower than manually preloading config variables as local variables, but this way is much more maintainable (and preserves sanity)
 
@@ -305,9 +324,11 @@ class FourPartChords(FourPartBaseObject):
 				# ti->ti or ti->do (ti->sol)
 				if _LT in chord1.pitchNames:
 					lt_idx = chord1.pitchNames.index(_LT) # leadingtone_index : there can only be one.
-					if pchord2[lt_idx] not in (pchord1[lt_idx], Pitch(_DO, octave=_above(_DO, pchord1[lt_idx]))) and (lt_idx != 0 or chord2[0].name not in {_LT, _DO.name}): #ForgiveBass if it is *not* at all possible to resolve/sustain
+					if ( pchord2[lt_idx] not in (pchord1[lt_idx], mus.pitch.Pitch(_DO, octave=_above(_DO, pchord1[lt_idx])))
+					and (lt_idx != 0 or chord2[0].name not in {_LT, _DO.name}) ): #ForgiveBass if it is *not* at all possible to resolve/sustain
+						
 						# FRUSTRATED LEADING TONE (inner voice)
-						if lt_idx in {1, 2} and Pitch(_SOL, octave=_below(_SOL, chord1[lt_idx])): 
+						if lt_idx in {1, 2} and mus.pitch.Pitch(_SOL, octave=_below(_SOL, chord1[lt_idx])): 
 							_log(f"VL: frustrated LT (dominant) voice:{lt_idx} cost:{_config['vl_frustrated_lt_dominant']}")
 							cost += _config['vl_frustrated_lt_dominant']
 						else: 
@@ -317,16 +338,21 @@ class FourPartChords(FourPartBaseObject):
 				if not _rm2_is_dominant: # alternate condition: if _resolves. Note: even in resolution, Dom/V -> i64 can have the "fa" held/sustained before resolving to "mi."
 					if _FT in chord1.pitchNames: # possibly more than one
 						for ft_idx, p in enumerate(chord1.pitchNames):
-							if p == _FT and pchord2[ft_idx] not in (chord1[ft_idx].pitch, Pitch(_MI, octave=_below(_MI, pchord1[ft_idx]))) and (ft_idx != 0 or chord2[ft_idx].name == _MI.name): #ForgiveBass
-									_log(f"VL: fa->mi TT violation voice:{ft_idx} cost:{_config['vl_dominant_tt_not_resolved']}, multiplier:{_config['vl_lt_tt_violation_cadential_multiplier'] if _resolves else 1}")
-									cost += _config['vl_dominant_tt_not_resolved'] * (_config['vl_lt_tt_violation_cadential_multiplier'] if _resolves else 1)
+							if ( p == _FT and pchord2[ft_idx] not in (chord1[ft_idx].pitch, mus.pitch.Pitch(_MI, octave=_below(_MI, pchord1[ft_idx])))
+							and (ft_idx != 0 or chord2[ft_idx].name == _MI.name) ): #ForgiveBass
+								
+								_log(f"VL: fa->mi TT violation voice:{ft_idx} cost:{_config['vl_dominant_tt_not_resolved']}, multiplier:{_config['vl_lt_tt_violation_cadential_multiplier'] if _resolves else 1}")
+								cost += _config['vl_dominant_tt_not_resolved'] * (_config['vl_lt_tt_violation_cadential_multiplier'] if _resolves else 1)
+			
 			else: # rm1 not dominant
 				# ti->ti or ti->do (ti->sol)
 				if _LT in chord1.pitchNames:
 					lt_idx = chord1.pitchNames.index(_LT) # leadingtone_index : there can only be one.
-					if pchord2[lt_idx] not in (pchord1[lt_idx], Pitch(_DO, octave=_above(_DO, pchord1[lt_idx]))) and (lt_idx != 0 or chord2[0].name not in {_LT, _DO.name}): #ForgiveBass if it is *not* at all possible to resolve/sustain
+					if ( pchord2[lt_idx] not in (pchord1[lt_idx], mus.pitch.Pitch(_DO, octave=_above(_DO, pchord1[lt_idx])))
+					and (lt_idx != 0 or chord2[0].name not in {_LT, _DO.name}) ): #ForgiveBass if it is *not* at all possible to resolve/sustain
+						
 						# FRUSTRATED LEADING TONE (inner voice)
-						if lt_idx in {1, 2} and Pitch(_SOL, octave=_below(_SOL, chord1[lt_idx])): 
+						if lt_idx in {1, 2} and mus.pitch.Pitch(_SOL, octave=_below(_SOL, chord1[lt_idx])): 
 							_log(f"VL: frustrated LT (nondominant) voice:{lt_idx} cost:{_config['vl_frustrated_lt']}")
 							cost += _config['vl_frustrated_lt']
 						else:
@@ -338,7 +364,9 @@ class FourPartChords(FourPartBaseObject):
 					seventh = chord1.seventh
 					seven_idx = pchord1.index(seventh) # (seventh cannot be doubled, so is unique)
 					# Resolutions have to go down a m2 or M2.
-					if not (seventh == pchord2[seven_idx] or Interval(noteStart=chord2[seven_idx], noteEnd=chord1[seven_idx]).name in {'m2','M2'}) and (seven_idx != 0 or (seventh.pitchClass + 12 - pchord2[seven_idx].pitchClass)%12 > 2): # second (): #ForgiveBass
+					if ( not (seventh == pchord2[seven_idx] or mus.interval.Interval(noteStart=chord2[seven_idx], noteEnd=chord1[seven_idx]).name in {'m2','M2'})
+					and (seven_idx != 0 or (seventh.pitchClass + 12 - pchord2[seven_idx].pitchClass)%12 > 2) ): #ForgiveBass
+						
 						_log(f"VL: Nondominant Seven not resolved (R of PSR) voice:{seven_idx} cost:{_config['vl_nd7_not_resolved']}")
 						cost += _config['vl_nd7_not_resolved']
 
@@ -346,7 +374,8 @@ class FourPartChords(FourPartBaseObject):
 			if not _rm2_is_dominant and rm2.containsSeventh():
 				seventh = chord2.seventh
 				seven_idx = pchord2.index(seventh)
-				if pchord1[seven_idx] != seventh and (seven_idx != 0 or chord1[seven_idx].name == seventh.name): #ForgiveBass && does not allow enharmonic equivalent (respelling) preparation.
+				if ( pchord1[seven_idx] != seventh
+				and (seven_idx != 0 or chord1[seven_idx].name == seventh.name) ): #ForgiveBass && does not allow enharmonic equivalent (respelling) preparation.
 					_log(f"VL: Nondominant Seven not prepared (S or PSR) voice:{seven_idx} cost:{_config['vl_nd7_not_prepared']}")
 					cost += _config['vl_nd7_not_prepared']
 			
@@ -357,20 +386,21 @@ class FourPartChords(FourPartBaseObject):
 			cost += _config['vl_voice_crossing'] * ((chord1[0]>chord2[1])+(chord1[1]<chord2[0]) + (chord1[1]>chord2[2])+(chord1[2]<chord2[1]) + (chord1[2]>chord2[3])+(chord1[3]<chord2[2]))
 			
 			# LEAPS: Avoid big leaps (generally). Octave leaps in bass is ok. Extra penalty for dissonant leaps, semitone-steps are not considered dissonant leaps (d2s not yet considered)
-			diffs = [ (abs(i.generic.value), not(i.specifier in {Specifier.PERFECT, Specifier.MAJOR, Specifier.MINOR} or i.generic.value==1)) for i in (Interval(noteStart=chord1[i], noteEnd=chord2[i]) for i in range(4)) ]
+			diffs = [ (abs(i.generic.value), not(i.specifier in {mus.interval.Specifier.PERFECT, mus.interval.Specifier.MAJOR, mus.interval.Specifier.MINOR} or i.generic.value==1))
+					  for i in (mus.interval.Interval(noteStart=chord1[j], noteEnd=chord2[j]) for j in range(4)) ]
 			_log("LEAPS: diffs=", diffs)
 			_log(f"Bass:{(0 if diffs[0][0] <= 5 or diffs[0][0] == 8 else _config['vl_bass_leap_gt5'] if diffs[0][0] <  8 else _config['vl_bass_leap_gt8'])} ::",
 				f"Tenor:{(0 if diffs[1][0]<= 2   else _config['vl_tenor_leap_3']   if diffs[1][0] == 3 else _config['vl_tenor_leap_4to5']   if diffs[1][0] <= 5 else _config['vl_tenor_leap_gt5']   if diffs[1][0] <= 8 else _config['vl_tenor_leap_gt8'])}, TChrom:{_config['vl_tenor_leap_dissonant'] * diffs[1][1]},",
 				f"Alto:{(0 if diffs[2][0]<= 2    else _config['vl_alto_leap_3']    if diffs[2][0] == 3 else _config['vl_alto_leap_4to5']    if diffs[2][0] <= 5 else _config['vl_alto_leap_gt5']    if diffs[2][0] <= 8 else _config['vl_alto_leap_gt8'])}, AChrom:{_config['vl_alto_leap_dissonant'] * diffs[2][1]},",
 				f"Soprano:{(0 if diffs[3][0]<= 2 else _config['vl_soprano_leap_3'] if diffs[3][0] == 3 else _config['vl_soprano_leap_4to5'] if diffs[3][0] <= 5 else _config['vl_soprano_leap_gt5'] if diffs[3][0] <= 8 else _config['vl_soprano_leap_gt8'])}, SChrom:{_config['vl_soprano_leap_dissonant'] * diffs[3][1]}")
-			cost += ((0 if diffs[0][0] <= 5 or diffs[0][0] == 8     else                                                                    _config['vl_bass_leap_gt5']    if diffs[0][0] <  8 else _config['vl_bass_leap_gt8'])    + _config['vl_bass_leap_dissonant']    * diffs[0][1]  # Bass
+			cost += ((0 if diffs[0][0] <= 5 or diffs[0][0] == 8               else                                                                              _config['vl_bass_leap_gt5']    if diffs[0][0] <  8 else _config['vl_bass_leap_gt8'])    + _config['vl_bass_leap_dissonant']    * diffs[0][1]  # Bass
 					+ (0 if diffs[1][0]<= 2 else _config['vl_tenor_leap_3']   if diffs[1][0] == 3 else _config['vl_tenor_leap_4to5']   if diffs[1][0] <= 5 else _config['vl_tenor_leap_gt5']   if diffs[1][0] <= 8 else _config['vl_tenor_leap_gt8'])   + _config['vl_tenor_leap_dissonant']   * diffs[1][1]  # Tenor
 					+ (0 if diffs[2][0]<= 2 else _config['vl_alto_leap_3']    if diffs[2][0] == 3 else _config['vl_alto_leap_4to5']    if diffs[2][0] <= 5 else _config['vl_alto_leap_gt5']    if diffs[2][0] <= 8 else _config['vl_alto_leap_gt8'])    + _config['vl_alto_leap_dissonant']    * diffs[2][1]  # Alto
 					+ (0 if diffs[3][0]<= 2 else _config['vl_soprano_leap_3'] if diffs[3][0] == 3 else _config['vl_soprano_leap_4to5'] if diffs[3][0] <= 5 else _config['vl_soprano_leap_gt5'] if diffs[3][0] <= 8 else _config['vl_soprano_leap_gt8']) + _config['vl_soprano_leap_dissonant'] * diffs[3][1]) # Soprano
 			
 			# prefer bass leaping down octave over bass leaping up.
-			if diffs[0][0]==8 and Interval(noteStart=chord1[0],noteEnd=chord2[0]).direction.value==1:
-				_log("Bass leaps octave up, cost:_config['vl_bass_leaps_octave_up")
+			if diffs[0][0]==8 and mus.interval.Interval(noteStart=chord1[0],noteEnd=chord2[0]).direction.value==1:
+				_log(f"Bass leaps octave up, cost:{_config['vl_bass_leaps_octave_up']}")
 				cost += _config['vl_bass_leaps_octave_up']
 			
 			# SPECIAL CASE (REPEATED CHORD)
@@ -405,7 +435,7 @@ class FourPartChords(FourPartBaseObject):
 				cost += _config['vl_melody_static']
 
 			# OUTER VOICES SHOULD NOT SIMILAR MOTION (should be incontrary motion instead)
-			if Interval(noteStart=chord1[3], noteEnd=chord2[3]).direction.value * Interval(noteStart=chord1[0], noteEnd=chord2[0]).direction.value == 1:
+			if mus.interval.Interval(noteStart=chord1[3], noteEnd=chord2[3]).direction.value * mus.interval.Interval(noteStart=chord1[0], noteEnd=chord2[0]).direction.value == 1:
 				_log(f"Outer voices in similar motion, cost:{_config['vl_outer_voices_similar_motion']}")
 				cost += _config['vl_outer_voices_similar_motion']
 			
@@ -430,24 +460,20 @@ class FourPartChords(FourPartBaseObject):
 
 		assert len(chordMembers) == 4
 
-		# fetches appropriate octave value one voice down. (prevents overlapping and spacing errors)
-		# note: same note twice means go an octave down, hence the strict inequality (<)
-		nextOctaveDown = lambda new_name, last_pitch: last_pitch.octave if scale_value(new_name) < scale_value(last_pitch.name) else last_pitch.octave-1
-
 		# Strategy: try a random Soprano octave to start,
 		# for Alto and Tenor there is basically only one correct choice; we are locked in.
 		bass = chordMembers.pop(0)
 		# sn,an,tn,bass: note names of chord members. s,a,t,b are pitches
 		for sn, an, tn in permutations(chordMembers, 3):
-			for s in self._generatePitches(Pitch(sn), lb=self.ranges[3][2], ub=self.ranges[3][3]):
-				a = Pitch(an)
+			for s in self._generatePitches(mus.pitch.Pitch(sn), lb=self.ranges[3][2], ub=self.ranges[3][3]):
+				a = mus.pitch.Pitch(an)
 				a.octave = nextOctaveDown(an, s)
-				t = Pitch(tn)
+				t = mus.pitch.Pitch(tn)
 				t.octave = nextOctaveDown(tn, a)
 				if not (self.ranges[2][2]<=a<=self.ranges[2][3] and self.ranges[1][2]<=t<=self.ranges[1][3]):
 					continue # make sure Alto and Tenor are in range
-				for b in self._generatePitches(Pitch(bass), lb=max(self.ranges[0][2], t.transpose('-d15')), ub=min(self.ranges[0][3], t.transpose('-m2'))):
-					yield Chord(deepcopy([b,t,a,s]))
+				for b in self._generatePitches(mus.pitch.Pitch(bass), lb=max(self.ranges[0][2], t.transpose('-d15')), ub=min(self.ranges[0][3], t.transpose('-m2'))):
+					yield mus.chord.Chord(deepcopy([b,t,a,s]))
 
 	def voiceChord(self, rm):
 		"""\
@@ -472,7 +498,7 @@ class FourPartChords(FourPartBaseObject):
 
 		if rm.containsSeventh():
 			# SEVENTH CHORD
-			yield from self._generateVoicings([pitch.name for pitch in rm.pitches])
+			yield from self._generateVoicings([p.name for p in rm.pitches])
 			# Incomplete chord: Try omitting fifth if chord is in root position, unless chord is diminished (+half diminished)
 			if rm.inversion() == 0 and rm.quality != 'diminished':
 				# double root
@@ -483,7 +509,7 @@ class FourPartChords(FourPartBaseObject):
 					yield from self._generateVoicings([rm.root().name, rm.seventh.name] + [rm.third.name]*2)
 		else:
 			# TRIAD
-			chordMembers = [pitch.name for pitch in rm.pitches]
+			chordMembers = [p.name for p in rm.pitches]
 			if rm.inversion() == 2:
 				# 64 chord must double fifth
 				yield from self._generateVoicings(chordMembers + [rm.fifth.name])
@@ -517,7 +543,7 @@ class FourPartChords(FourPartBaseObject):
 		prog = [l.strip().split(":") for l in prog.replace("0", "ø").split("\n") if l.strip() and not l.strip().startswith('//')]
 		phrases = []
 		for key, chords in prog:
-			phrase_key = Key(key)
+			phrase_key = mus.key.Key(key)
 			phrase = []
 			rhythm = []
 			# listcomp is technically faster, but a pain to write/read/maintain. This operation is only done once, no need to optimize!
@@ -526,7 +552,7 @@ class FourPartChords(FourPartBaseObject):
 				if not chord:
 					continue
 				clist = chord.split('!')
-				phrase.append( (RomanNumeral(clist[0], phrase_key),) ) # as a singleton tuple
+				phrase.append( (mus.roman.RomanNumeral(clist[0], phrase_key),) ) # as a singleton tuple
 				if len(clist) > 1 and clist[1]:
 					try:
 						rhythm.append(Fraction(clist[1]))

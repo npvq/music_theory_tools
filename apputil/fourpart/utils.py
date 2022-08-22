@@ -1,17 +1,37 @@
-from music21.note import Note
-from music21.pitch import Pitch, Accidental
-from music21.chord import Chord
-from music21.roman import RomanNumeral
-from music21.key import Key, KeySignature
-from music21.interval import Interval, Specifier
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+ #--------------#
+# Author:  @npvq #
+# Licence: GPLv3 #
+ #--------------#
 
-from music21.meter import TimeSignature
-from music21.clef import BassClef, TrebleClef
-from music21.layout import StaffGroup
-from music21.instrument import Piano
-from music21.stream import Part, Score, Voice
+ #==================#
+# Module Description #
+ #==================#
+"""\
+Utilities module
+Contains "Query" Wrappers to contain queries to the FourPart algorithm classes
+as an interface (e.g. for GUI app).
+"""
 
-from fourpart import FourPartChords, do_nothing
+# ----- SYSTEM IMPORTS ----- #
+
+
+
+# ----- 3RD PARTY IMPORTS ----- #
+
+# from music21 import (
+# 	note, chord, key, # MUSIC21 fundamentals
+# 	meter, clef, layout, instrument, stream, # for exporting
+# )
+import music21 as mus # unfortunately it is necessary
+
+# ----- LOCAL IMPORTS ----- #
+
+from fourpart import do_nothing
+from fourpart.fpchords import FourPartChords
+
+# ------------------------------ #
 
 """ Stuff is getting a bit out of hand here
 Conventions:
@@ -20,6 +40,10 @@ Conventions:
 """
 
 class FPChordsQuery(object):
+	"""\
+	Contains a single query towards a FourPart engine.
+	Engine is required. Not meant to be used as a standalone class.
+	"""
 
 	def __init__(self, engine, cp, ts='4/4', consoleOutput=do_nothing):
 		self.engine = engine
@@ -27,7 +51,7 @@ class FPChordsQuery(object):
 		self.engine.logging = True
 		self.engine.logStream = consoleOutput
 
-		self.timeSignature = TimeSignature(ts)
+		self.timeSignature = mus.meter.TimeSignature(ts)
 
 		# organization: self.data['TYPE'][PHRASE_NO] then possibly [CHORD_NO]
 
@@ -68,7 +92,7 @@ class FPChordsQuery(object):
 				# retrace solution
 				solution = []
 				for ch in reversed(range(len(self.data['DP'][phr]))): # ch=chord number
-					solution.append(Chord(self.data['voicings'][phr][ch][op]))
+					solution.append(mus.chord.Chord(self.data['voicings'][phr][ch][op]))
 					op = self.data['DP'][phr][ch][op][1] # set op to op's backreference (to the last optimal element)
 				solution.reverse()
 				self.data['solutions'][phr].append((solution, cost))
@@ -76,14 +100,11 @@ class FPChordsQuery(object):
 	def generateSolution(self, choices):
 		# Collapsed SATB score.
 
-		instr = Piano()
-		instr.instrumentName = ""
-
-		voices = [Voice(instr) for _ in range(4)]
+		voices = [mus.stream.Voice(getInstrument()) for _ in range(4)]
 		current_key = None
 
-		SA = Part([TrebleClef(), voices[0], voices[1]])
-		TB = Part([BassClef(), voices[2], voices[3]])
+		SA = mus.stream.Part([mus.clef.TrebleClef(), voices[0], voices[1]])
+		TB = mus.stream.Part([mus.clef.BassClef(), voices[2], voices[3]])
 
 		assert(len(choices) == self.length)
 		# totalCost = 0
@@ -94,13 +115,13 @@ class FPChordsQuery(object):
 			# remember, rm is wrapped.
 			for ch, ((rm,), duration, voicing) in enumerate(zip(self.data['chords'][phr], self.data['rhythm'][phr], self.data['solutions'][phr][choice][0])):
 				bass, tenor, alto, soprano = [
-					Note(p, quarterLength=duration) for p in voicing.pitches
+					mus.note.Note(p, quarterLength=duration) for p in voicing.pitches
 				]
 				if ch == 0:
 					if rm.key != current_key:
 						bass.addLyric(rm.key.tonicPitchNameWithCase.replace('#','♯').replace('-','♭')+': '+rm.figure)
 					if not current_key or rm.key not in {current_key, current_key.relative}:
-						ks = KeySignature(rm.key.sharps)
+						ks = mus.key.KeySignature(rm.key.sharps)
 						SA.append(ks)
 						TB.append(ks)
 				else:
@@ -114,8 +135,8 @@ class FPChordsQuery(object):
 				voices[3].append(bass)
 
 		# https://web.mit.edu/music21/doc/moduleReference/moduleLayout.html?highlight=staff#music21.layout.Staff
-		score = Score([SA, TB], self.timeSignature)
-		score.insert(0, StaffGroup([SA, TB], symbol='brace', barTogether=True))
+		score = mus.stream.Score([SA, TB], self.timeSignature)
+		score.insert(0, mus.layout.StaffGroup([SA, TB], symbol='brace', barTogether=True))
 
 		return score
 
@@ -124,8 +145,10 @@ class FPChordsQuery(object):
 
 
 
-
-
+def getInstrument():
+        instr = mus.instrument.Piano()
+        instr.instrumentName = ""
+        return instr
 
 
 
@@ -143,14 +166,6 @@ def textToChordProgression(txt):
 	lines = txt.split('\n')
 	if "+S+ +A+ +T+ +B+" in lines[0]:
 		lines.pop(0)
-	cp = [ Chord(line) for line in lines if len(line.split(" ")) == 4 ] # chord progression
+	cp = [ mus.chord.Chord(line) for line in lines if len(line.split(" ")) == 4 ] # chord progression
 	return cp
-
-
-if __name__ == "__main__":
-	# Unit Tests (temp)
-	chsh = "D: I IV V V7 I!4\nE: I IV V V7 I!4"
-	x = FourPartChords()
-	y = FPChordsQuery(x, chsh, ts='4/4')
-
 

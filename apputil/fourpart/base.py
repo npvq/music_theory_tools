@@ -11,23 +11,15 @@
 
 # ----- SYSTEM IMPORTS ----- #
 
-
+# Debugging/Logging
+import time
 
 # ----- 3RD PARTY IMPORTS ----- #
 
-# --MUSIC21
-from music21.note import Note
-from music21.pitch import Pitch, Accidental
-from music21.chord import Chord
-from music21.roman import RomanNumeral
-from music21.key import Key, KeySignature
-# from music21.interval import Interval, Specifier
-
-# --MUSIC21 for exporting
-# from music21.meter import TimeSignature
-# from music21.clef import BassClef, TrebleClef
-# from music21.instrument import Piano
-# from music21.stream import Part, Score, Voice
+# from music21 import (
+# 	pitch, # MUSIC21 fundamentals
+# )
+import music21 as mus # unfortunately it is necessary (for consistency)
 
 # ----- LOCAL IMPORTS ----- #
 
@@ -55,13 +47,14 @@ class FourPartBaseObject(object):
 
 		self.chordCost = self._get_chordCostFunction() # this will break the program if you run __init__.
 
-		# Non Config-related
+		# Debug/Logging. Non config-related.
 		self.logging = True
 		self.logStream = lambda s: print("DBG:",s) # or do_nothing
 
 	def configure(self, **kwargs):
-		"""Updates configurations and ensures that those updates take effect.
-		   Should be overridden by subclasses should more internal states be implemented."""
+		"""\
+		Updates configurations and ensures that those updates take effect.
+		Should be overridden by subclasses should more internal states be implemented."""
 
 		self.config.update(kwargs)
 
@@ -81,7 +74,7 @@ class FourPartBaseObject(object):
 		self.logStream(" ".join([i.__str__() for i in args]))
 
 	@staticmethod
-	def _generatePitches(query, lb=Pitch('A0'), ub=Pitch('C8')): # lower & upper bounds
+	def _generatePitches(query, lb=mus.pitch.Pitch('A0'), ub=mus.pitch.Pitch('C8')): # lower & upper bounds
 		"""Query all notes in range of a certain pitch-class. Those outside the common range will be assigned a cost."""
 		
 		# We start checking from the same octave as the lower bound
@@ -111,6 +104,7 @@ class FourPartBaseObject(object):
 
 	def DP_MemoizePhraseNoPruning(self, phrase):
 		"""\
+
 		Abstractable (reusable) construct: for each element of "phrase," let it be a tuple
 		whose first element contains the roman numeral (with "Key" information).
 		"""
@@ -160,9 +154,11 @@ class FourPartBaseObject(object):
 		return DP, V # Return DP memoized tables, and the list of list of voicings.
 
 	def DP_MemoizePhrasePrune(self, phrase):
-		"""Abstractable (reusable) construct: for each element of "phrase," let it be a tuple
-		   whose first element contains the roman numeral (with "Key" information).
-		   Pruning is enabled."""
+		"""\
+		DP Algorithm where Pruning is enabled.
+		Abstractable (reusable) construct: for each element of "phrase," let it be a tuple
+		whose first element contains the roman numeral (with "Key" information).
+		"""
 
 		# NOTE: chordCost and voiceLeadingCost do not take in "extra information" in these tuples. They only judge based on roman numeral and chord voicing (for now).
 
@@ -181,11 +177,12 @@ class FourPartBaseObject(object):
 		for j in range(len(V[0])):
 			DP[0][j] = (self.chordCost(V[0][j], phrase[0][0]), None)
 		# Mask updating (pruning)
-		# pruning first chord options greatly decrease bottleneck during second chord
-		bar = _confidence * ( min(DP[0])[0] + self.config['dp_first_buffer']//(len(V[0])*(len(V[1]) if len(V)>1 else 1)) )
-		for j in range(len(V[0])):
-			if DP[0][j][0] > bar:
-				Mask[0][j] = False
+		if self.config['dp_prune_first']:
+			# pruning first chord options greatly decrease bottleneck during second chord
+			bar = _confidence * ( min(DP[0])[0] + self.config['dp_first_buffer']//(len(V[0])*(len(V[1]) if len(V)>1 else 1)) )
+			for j in range(len(V[0])):
+				if DP[0][j][0] > bar:
+					Mask[0][j] = False
 
 		# subsequent layers i=1..L-1
 		for i in range(1, L):
