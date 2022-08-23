@@ -56,7 +56,7 @@ theme_darker_button = ('white', _theme_button_color_darker)
 mouseover_button_color = ('black', 'white')
 
 def pad(s, width=1):
-	return " "*width+s+" "*width
+    return " "*width+s+" "*width
 
 # ========== Main Logic ==========
 

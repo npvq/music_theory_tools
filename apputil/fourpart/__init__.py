@@ -25,8 +25,8 @@ __init__ program for FourPart package containing algorithms using music21.
 
 # --MUSIC21
 # from music21 import (
-# 	note, pitch, chord, roman, key, interval, # MUSIC21 fundamentals
-# 	meter, clef, instrument, stream # for exporting
+#   note, pitch, chord, roman, key, interval, # MUSIC21 fundamentals
+#   meter, clef, instrument, stream # for exporting
 # )
 # from music21.note import Note
 # from music21.pitch import Pitch, Accidental
@@ -69,8 +69,8 @@ figureOut = lambda rm : (rm, rm+'6', rm+'64')
 figureOutSeventh = lambda rm : (rm+'7', rm+'65', rm+'43', rm+'42')
 
 tonicChords = {
-	'major': [],
-	'minor': [],
+    'major': [],
+    'minor': [],
 }
 tonicChords['major'].extend(figureOut('I'))
 tonicChords['major'].extend(figureOut('vi'))
@@ -82,8 +82,8 @@ tonicChords['minor'].extend(figureOutSeventh('VI'))
 tonicChords['minor'].extend(figureOut('I')) # I : picardy third (major-mode borrowing/mixture)
 
 dominantChords = {
-	'major': [],
-	'minor': [],
+    'major': [],
+    'minor': [],
 }
 
 dominantChords['major'].extend(figureOut('V'))
