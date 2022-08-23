@@ -19,7 +19,7 @@ import PySimpleGUI as sg
 
 # ----- LOCAL IMPORTS ----- #
 
-from app import do_nothing
+
 
 # ------------------------------ #
 
@@ -115,11 +115,15 @@ class WindowManager(object):
 					continue
 				
 				if event == "WINDOW_MANAGER_EXIT_ALL":
-					self.quit_all()
-					break
+					confirm = sg.popup_ok_cancel("Are you sure?",title='Exit All Windows',keep_on_top=True,modal=True,)#no_titlebar=True)
+					if confirm != 'Cancel':
+						self.quit_all()
+						break
+					continue
 
 				if event == sg.WIN_CLOSED or event.startswith('Exit'): # 'Exit', 'Exit-2', 'Exit-alt' will all work.
 					self.queueUnregister(alias)
+					continue
 
 				if obj['disabled']:
 					continue
