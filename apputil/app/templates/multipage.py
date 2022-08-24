@@ -79,7 +79,7 @@ class MultiPageWindow(object):
         self.stateQueue = None
 
 
-    def func(self, window, event, values):
+    def func(self, WM, window, event, values):
 
         # Exit button is managed by WindowManager
 
@@ -100,7 +100,7 @@ class MultiPageWindow(object):
             window[f'{self.state}'].update(disabled=True)
 
         else:
-            self.inner_func(window, event, values)
+            self.inner_func(WM, window, event, values)
 
     def setInnerFunc(self, inner_func):
         """\
@@ -108,7 +108,7 @@ class MultiPageWindow(object):
         """
         self.inner_func = inner_func
 
-    def processQueues(self, window):
+    def processQueues(self, WM, window):
         """\
         The queue function fed into window manager.
         The only thing to process is a change of state, i.e., if another window calls on this window to change the page it is on.

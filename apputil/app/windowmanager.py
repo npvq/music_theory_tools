@@ -111,7 +111,7 @@ class WindowManager(object):
                 if event == "__TIMEOUT__":
                     if (not obj['disabled']) and obj['queue']:
                         # process/resolve internal queues.
-                        obj['queue'](obj['window'])
+                        obj['queue'](self, obj['window'])
                     continue
                 
                 if event == "WINDOW_MANAGER_EXIT_ALL":
@@ -128,7 +128,7 @@ class WindowManager(object):
                 if obj['disabled']:
                     continue
 
-                obj['func'](obj['window'], event, values)
+                obj['func'](self, obj['window'], event, values)
         # ----------- End of Main Event Loop -----------
 
         self.running = False

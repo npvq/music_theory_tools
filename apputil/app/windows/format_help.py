@@ -45,9 +45,9 @@ Figured bass works much like chord progressions, except the bass is now given, t
 
 Likewise, for input, simply specify the pitch of each bassnote (like c#3 or C#3, and use - for flats e.g. B-2), and optionally add chord figures in parentheses, comma separated, before using the same '!' notation for rhythm.
 
-In the figures, you can use # or + for sharps (raised) and - for flats (lowered). An accidental symbol alone always modifies the third of the chord.
+In the figures, you can use # or + for sharps (raised) and - or 'b' for flats (lowered). An accidental symbol alone always modifies the third of the chord.
 
-Note that while you can use 'b' for flats in the key signature, you cannot use 'b' (yet) in the bassline pitch specification.
+Note that you cannot use 'b' (yet) in the bassline pitch specification.
 
 Example:\
 """
